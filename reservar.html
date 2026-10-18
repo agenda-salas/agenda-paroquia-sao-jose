@@ -28,13 +28,13 @@
       <div class="turnos-escolha" id="turnos"></div>
     </fieldset>
 
-    <label class="campo">Nome do responsável
+    <label class="campo"><span>Nome do responsável <span class="obrig" aria-hidden="true">*</span></span>
       <input type="text" name="nome" autocomplete="name" maxlength="80" required>
     </label>
-    <label class="campo">Telefone (WhatsApp)
+    <label class="campo"><span>Telefone (WhatsApp) <span class="obrig" aria-hidden="true">*</span></span>
       <input type="tel" name="telefone" autocomplete="tel" placeholder="(61) 99999-9999" required>
     </label>
-    <label class="campo">Pastoral ou grupo
+    <label class="campo"><span>Pastoral ou grupo <span class="obrig" aria-hidden="true">*</span></span>
       <input type="text" name="grupo" list="lista-grupos" maxlength="80" placeholder="Ex.: Pastoral da Catequese" required>
       <datalist id="lista-grupos"></datalist>
     </label>
@@ -49,7 +49,7 @@
         <input type="text" name="paroco" maxlength="120" placeholder="Ex.: Pe. João da Silva">
       </label>
     </div>
-    <label class="campo">Motivo da reserva
+    <label class="campo"><span>Motivo da reserva <span class="obrig" id="obrig-motivo" aria-hidden="true" hidden>*</span></span>
       <textarea name="motivo" rows="3" maxlength="300" placeholder="Ex.: encontro mensal dos catequistas"></textarea>
     </label>
 

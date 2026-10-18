@@ -71,9 +71,9 @@ function slotsDoDia(data) {
 
 function textoAgendado(a) {
   const quando = `${dataLonga(a.data).toLowerCase()}, às ${hora(hm(a.inicio) + ':00')}`;
-  if (a.status === 'pendente') {
+  if (a.status === 'pendente' || a.status === 'solicitado') {
     return `Olá, ${primeiroNome(a.nome)}! Recebemos o pedido de Direcionamento Espiritual com o Pároco da Paróquia São José para ${quando}. `
-      + 'Ele aguarda a confirmação da secretaria. Avisaremos assim que for liberado.';
+      + `Ele aguarda a confirmação ${a.status === 'pendente' ? 'da secretaria' : 'da secretaria ou do Pároco'}. Avisaremos assim que for confirmado.`;
   }
   if (a.tipo === 'enfermo') {
     return `Olá, ${primeiroNome(a.nome)}! O atendimento do Pároco da Paróquia São José ao enfermo está agendado para ${quando}, no endereço: ${a.endereco}.`;
@@ -143,7 +143,7 @@ async function carregarSemana() {
   const fim = somaDias(ini, 6);
   const [{ data: a, error: e1 }, { data: b, error: e2 }] = await Promise.all([
     sb.from('atendimentos').select('*').gte('data', ini).lte('data', fim)
-      .in('status', ['agendado', 'pendente', 'realizado']).order('data').order('inicio'),
+      .in('status', ['agendado', 'pendente', 'solicitado', 'realizado']).order('data').order('inicio'),
     sb.from('atend_bloqueios').select('*').lte('data_inicio', fim).gte('data_fim', ini),
   ]);
   if (e1 || e2) { aviso('erro', limparErro(e1 || e2)); return; }
@@ -202,16 +202,18 @@ function slotHtml(s) {
 
   if (a) {
     const pend = a.status === 'pendente';
+    const solic = a.status === 'solicitado';
     const extra = a.tipo === 'externo'
       ? `<span class="nota">${esc(a.paroquia_origem || '')} · ${esc(a.paroco_responsavel || '')}</span>` : '';
     return `
-      <li class="slot ${pend ? 'slot-pend' : 'slot-ocupado'}">
+      <li class="slot ${pend || solic ? 'slot-pend' : 'slot-ocupado'}">
         <span class="slot-hora">${faixa}</span>
         <div class="slot-corpo">
           <b>${esc(a.nome)}</b>
           <span class="acoes" style="gap:6px">
             <span class="etq ${a.tipo === 'externo' ? 'etq-externo' : a.tipo === 'enfermo' ? 'etq-externo' : 'etq-azul'}">${TIPO[a.tipo]}</span>
             ${pend ? '<span class="etq etq-pend">Aguardando a secretaria</span>' : ''}
+            ${solic ? '<span class="etq etq-pend">Pedido pelo site · confirmar</span>' : ''}
             ${a.status === 'realizado' ? '<span class="etq etq-ok">Realizado</span>' : ''}
           </span>
           ${extra}
@@ -220,7 +222,9 @@ function slotHtml(s) {
           <a href="${linkWhatsApp(a.telefone, '')}" target="_blank" rel="noopener" class="nota">${esc(a.telefone)}</a>
           <span class="acoes slot-acoes">
             ${pend && ehSecretaria ? `<button type="button" class="btn btn-peq" data-acao="liberar" data-id="${a.id}">Liberar</button>` : ''}
-            ${!pend && a.status === 'agendado' && velho ? `<button type="button" class="btn btn-peq" data-acao="realizado" data-id="${a.id}">Realizado</button>` : ''}
+            ${solic ? `<button type="button" class="btn btn-peq" data-acao="confirmar" data-id="${a.id}">Confirmar</button>` : ''}
+            ${(pend || solic) && !velho ? `<button type="button" class="btn btn-perigo btn-peq" data-acao="recusar" data-id="${a.id}">Recusar</button>` : ''}
+            ${a.status === 'agendado' && velho ? `<button type="button" class="btn btn-peq" data-acao="realizado" data-id="${a.id}">Realizado</button>` : ''}
             ${!velho ? `<button type="button" class="btn btn-peq" data-acao="avisar" data-id="${a.id}">Avisar</button>` : ''}
             <button type="button" class="btn btn-perigo btn-peq" data-acao="excluir" data-id="${a.id}">Excluir</button>
           </span>
@@ -271,6 +275,21 @@ async function acao(tipo, d) {
     if (error) return aviso('erro', limparErro(error));
     a.status = 'agendado';
     aviso('ok', `Atendimento de ${a.nome} liberado.`, linkAvisar(a, textoAgendado(a)));
+    return carregarSemana();
+  }
+  if (tipo === 'confirmar' && a) {
+    const { error } = await sb.from('atendimentos').update({ status: 'agendado' }).eq('id', a.id);
+    if (error) return aviso('erro', limparErro(error));
+    a.status = 'agendado';
+    aviso('ok', `Atendimento de ${a.nome} confirmado.`, linkAvisar(a, textoAgendado(a)));
+    return carregarSemana();
+  }
+  if (tipo === 'recusar' && a) {
+    if (!confirm(`Recusar o pedido de ${a.nome} (${dataCurta(a.data)}, ${hm(a.inicio)})? O horário fica livre.`)) return;
+    const { error } = await sb.from('atendimentos').update({ status: 'cancelado' }).eq('id', a.id);
+    if (error) return aviso('erro', limparErro(error));
+    const texto = `Olá, ${primeiroNome(a.nome)}! Infelizmente não será possível o Direcionamento Espiritual com o Pároco da Paróquia São José em ${dataLonga(a.data).toLowerCase()}, às ${hora(hm(a.inicio) + ':00')}. Por favor, escolha outro horário no site ou fale com a secretaria.`;
+    aviso('ok', `Pedido de ${a.nome} recusado.`, linkAvisar(a, texto));
     return carregarSemana();
   }
   if (tipo === 'realizado' && a) {
@@ -397,7 +416,7 @@ function ligarBloquear() {
     await carregarSemana();
     // Atendimentos já marcados dentro do bloqueio
     const { data: afetados } = await sb.from('atendimentos').select('*')
-      .gte('data', de).lte('data', ate).in('status', ['agendado', 'pendente']);
+      .gte('data', de).lte('data', ate).in('status', ['agendado', 'pendente', 'solicitado']);
     const conflitos = (afetados || []).filter((a) => !ini || (hm(a.inicio) < fim && hm(a.fim) > ini));
     if (conflitos.length) {
       aviso('info', `Bloqueio registrado. Atenção: ${conflitos.length === 1 ? 'há 1 atendimento marcado' : `há ${conflitos.length} atendimentos marcados`} nesse período, que continuam na agenda:`,

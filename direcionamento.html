@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="raiz" content=".">
+<title>Direcionamento Espiritual · Sistema de Reservas</title>
+<meta name="theme-color" content="#40623F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="pagina">
+
+  <section class="cartao linha-dourada dir-intro">
+    <span class="sobre">Agenda do Pároco</span>
+    <h1>Direcionamento Espiritual</h1>
+    <p>Escolha um horário livre e faça seu pedido. A secretaria ou o Pároco confirma e avisa você pelo WhatsApp.</p>
+    <ul class="dir-grade" id="grade"></ul>
+  </section>
+
+  <div id="msg" class="aviso" hidden role="status"></div>
+
+  <section class="secao" id="sec-meus" hidden>
+    <div class="secao-topo"><h2>Meus pedidos</h2></div>
+    <ul class="dir-meus" id="meus"></ul>
+  </section>
+
+  <section class="secao">
+    <div class="secao-topo">
+      <h2>Horários disponíveis</h2>
+      <span class="nota">Próximos 14 dias</span>
+    </div>
+    <div class="legenda">
+      <span><i class="c-livre"></i>Livre</span>
+      <span><i class="c-off"></i>Ocupado</span>
+    </div>
+    <div id="dias" class="dias-atend"><div class="vazio">Carregando horários…</div></div>
+  </section>
+</main>
+
+<dialog id="dlg-pedir" class="dlg" aria-labelledby="pd-titulo">
+  <form id="f-pedir" class="form" method="dialog" novalidate>
+    <div>
+      <h2 id="pd-titulo">Pedir horário</h2>
+      <span class="nota" id="pd-quando"></span>
+    </div>
+    <fieldset id="pd-tipos" class="dir-tipos">
+      <legend class="campo"><span>Para quem é o atendimento <span class="obrig" aria-hidden="true">*</span></span></legend>
+    </fieldset>
+    <label class="campo"><span>Nome <span class="obrig" aria-hidden="true">*</span></span>
+      <input type="text" name="nome" autocomplete="name" maxlength="80" required>
+    </label>
+    <label class="campo"><span>Telefone (WhatsApp) <span class="obrig" aria-hidden="true">*</span></span>
+      <input type="tel" name="telefone" autocomplete="tel" placeholder="(61) 99999-9999" required>
+    </label>
+    <label class="campo"><span><span id="pd-rotulo-end">Endereço</span> <span class="obrig" aria-hidden="true">*</span></span>
+      <input type="text" name="endereco" autocomplete="street-address" maxlength="160" placeholder="Rua, número, bairro, cidade" required>
+    </label>
+    <div id="pd-externo" class="form" hidden>
+      <label class="campo"><span>Paróquia em que atua <span class="obrig" aria-hidden="true">*</span></span>
+        <input type="text" name="paroquia" maxlength="120" placeholder="Ex.: Paróquia Nossa Senhora de Fátima">
+      </label>
+      <label class="campo"><span>Nome do pároco responsável <span class="obrig" aria-hidden="true">*</span></span>
+        <input type="text" name="paroco" maxlength="120" placeholder="Ex.: Pe. João da Silva">
+      </label>
+    </div>
+    <label class="campo"><span id="pd-rotulo-assunto">Assunto (opcional)</span>
+      <textarea name="assunto" rows="3" maxlength="400" placeholder="Se quiser, conte em poucas palavras o que deseja conversar."></textarea>
+    </label>
+    <div class="aviso aviso-info" id="pd-regra"></div>
+    <div class="aviso aviso-erro" id="pd-erro" hidden role="alert"></div>
+    <div class="acoes">
+      <button type="button" class="btn btn-sec" data-fechar>Voltar</button>
+      <button type="submit" class="btn" style="flex:1" id="pd-enviar">Enviar pedido</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="js/paginas/direcionamento.js"></script>
+</body>
+</html>

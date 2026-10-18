@@ -94,7 +94,7 @@ function desenhar() {
 async function iniciar() {
   await montarPagina('salas');
   await escolherPerfil();
-  faixaPerfil(document.getElementById('perfil'), () => { if (salas) desenhar(); });
+  faixaPerfil(document.getElementById('perfil'));
   document.getElementById('hoje').textContent = dataLonga(hojeISO());
   try {
     cfg = await carregarConfig();

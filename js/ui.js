@@ -41,6 +41,7 @@ export async function montarPagina(ativo) {
       <nav class="menu" aria-label="Principal">
         <a href="${raiz}/index.html" class="${ativo === 'salas' ? 'ativo' : ''}">Salas</a>
         ${sessao ? `<a href="${raiz}/minhas-reservas.html" class="${ativo === 'minhas' ? 'ativo' : ''}">Minhas reservas</a>` : ''}
+        <a href="${raiz}/direcionamento.html" class="${ativo === 'direcionamento' ? 'ativo' : ''}">Direcionamento Espiritual</a>
         ${conta}
       </nav>
     </div>`;
@@ -56,6 +57,7 @@ export async function montarPagina(ativo) {
   addEventListener('offline', () => { aviso.hidden = false; });
 
   document.getElementById('sair')?.addEventListener('click', async () => {
+    esquecerPerfil();   // ao sair, a escolha de acesso é feita de novo
     await sb.auth.signOut();
     location.href = `${raiz}/index.html`;
   });
@@ -97,7 +99,7 @@ export function avisoCache(quando) {
 }
 
 // ---------------------------------------------------------------- perfil
-// "paroquiano" ou "externo" (outra paróquia). Fica guardado neste aparelho.
+// "paroquiano" ou "externo" (não paroquiano). Vale até a pessoa clicar em Sair.
 const CHAVE_PERFIL = 'salas-sj:perfil';
 
 export function perfilAtual() {
@@ -108,14 +110,25 @@ function guardarPerfil(v) {
   try { localStorage.setItem(CHAVE_PERFIL, v); } catch {}
 }
 
+export function esquecerPerfil() {
+  try { localStorage.removeItem(CHAVE_PERFIL); } catch {}
+}
+
 export function nomePerfil(p) {
   return p === 'externo' ? 'Não paroquiano' : 'Paroquiano';
 }
 
-// Mostra as duas caixas de escolha. Com forcar = false, só pergunta se ainda não escolheu.
-export function escolherPerfil(forcar = false) {
+const ICONE_PERFIL = {
+  paroquiano: '<path d="M12 3v6M9 6h6"/><path d="M5 21V12l7-4 7 4v9"/><path d="M10 21v-5h4v5"/>',
+  externo: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  direcionamento: '<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/>',
+};
+const icone = (k) => `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONE_PERFIL[k]}</svg>`;
+
+// Caixas de acesso. Só pergunta se ainda não escolheu; a escolha não muda até Sair.
+export function escolherPerfil() {
   const atual = perfilAtual();
-  if (atual && !forcar) return Promise.resolve(atual);
+  if (atual) return Promise.resolve(atual);
   return new Promise((resolve) => {
     const dlg = document.createElement('dialog');
     dlg.className = 'perfil-dialogo';
@@ -123,19 +136,22 @@ export function escolherPerfil(forcar = false) {
     dlg.innerHTML = `
       <div class="perfil-cab">
         <img src="${raiz}/img/brasao.png" alt="" onerror="this.remove()">
-        <h2 id="perfil-titulo">Como você vai reservar?</h2>
+        <h2 id="perfil-titulo" tabindex="-1" autofocus style="outline:none">Bem-vindo</h2>
         <p class="nota">Escolha uma opção para continuar.</p>
       </div>
       <div class="perfil-opcoes">
         <button type="button" class="perfil-opcao" data-perfil="paroquiano">
-          <b>Sou Paroquiano</b>
+          <span class="perfil-ic">${icone('paroquiano')}</span><b>Sou Paroquiano</b>
         </button>
         <button type="button" class="perfil-opcao" data-perfil="externo">
-          <b>Não sou Paroquiano</b>
+          <span class="perfil-ic">${icone('externo')}</span><b>Não sou Paroquiano</b>
         </button>
+        <a class="perfil-opcao" href="${raiz}/direcionamento.html">
+          <span class="perfil-ic">${icone('direcionamento')}</span><b>Direcionamento Espiritual</b>
+        </a>
       </div>`;
     document.body.append(dlg);
-    dlg.addEventListener('cancel', (e) => { if (!atual) e.preventDefault(); });
+    dlg.addEventListener('cancel', (e) => e.preventDefault());
     dlg.addEventListener('close', () => { dlg.remove(); resolve(perfilAtual()); });
     dlg.querySelectorAll('[data-perfil]').forEach((b) => b.addEventListener('click', () => {
       guardarPerfil(b.dataset.perfil);
@@ -145,17 +161,8 @@ export function escolherPerfil(forcar = false) {
   });
 }
 
-// Faixa "Você está reservando como ... · Trocar"
-export function faixaPerfil(el, aoTrocar) {
-  const desenhar = () => {
-    const p = perfilAtual();
-    el.innerHTML = p ? `<span class="faixa-perfil">Reservando como: <b>${nomePerfil(p)}</b>
-      <button type="button" class="link-btn">Trocar</button></span>` : '';
-    el.querySelector('button')?.addEventListener('click', async () => {
-      await escolherPerfil(true);
-      desenhar();
-      if (aoTrocar) aoTrocar(perfilAtual());
-    });
-  };
-  desenhar();
+// Faixa "Acesso: ..." (sem troca; para mudar, é preciso sair e entrar de novo)
+export function faixaPerfil(el) {
+  const p = perfilAtual();
+  el.innerHTML = p ? `<span class="faixa-perfil">Acesso: <b>${nomePerfil(p)}</b></span>` : '';
 }

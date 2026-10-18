@@ -16,7 +16,8 @@ function aplicarPerfil() {
   const f = $('form');
   const externo = perfilAtual() === 'externo';
   $('extras').hidden = !externo;
-  ['endereco', 'paroquia', 'paroco'].forEach((n) => { f[n].required = externo; });
+  ['endereco', 'paroquia', 'paroco', 'motivo'].forEach((n) => { f[n].required = externo; });
+  $('obrig-motivo').hidden = !externo;
   if (externo) {
     try {
       const d = JSON.parse(localStorage.getItem(CHAVE_EXTRAS) || '{}');
@@ -45,7 +46,7 @@ async function iniciar() {
   mascaraTelefone(f.telefone);
   preencherDados();
   await escolherPerfil();
-  faixaPerfil($('perfil'), aplicarPerfil);
+  faixaPerfil($('perfil'));
 
   try {
     const [sl, c, rt, ra, rb, grupos] = await Promise.all([
@@ -94,6 +95,7 @@ async function iniciar() {
       if (!f.endereco.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o endereço.');
       if (!f.paroquia.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a paróquia em que atua.');
       if (!f.paroco.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o nome do pároco responsável.');
+      if (!f.motivo.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o motivo da reserva.');
       try {
         localStorage.setItem(CHAVE_EXTRAS, JSON.stringify({ endereco: f.endereco.value.trim(), paroquia: f.paroquia.value.trim(), paroco: f.paroco.value.trim() }));
       } catch {}
