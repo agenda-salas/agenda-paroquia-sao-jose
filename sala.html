@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="raiz" content=".">
+<title>Agenda da sala · Sistema de Reservas</title>
+<meta name="theme-color" content="#40623F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="pagina" style="gap:18px">
+  <a href="index.html" class="voltar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Todas as salas</a>
+
+  <div class="agenda-topo">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span class="sobre" id="sala-tipo"></span>
+      <h1 id="sala-nome">Carregando…</h1>
+    </div>
+    <div role="toolbar" aria-label="Ações da reserva" class="acoes">
+      <button type="button" class="btn" id="bt-reservar" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Reservar
+      </button>
+      <button type="button" class="btn btn-sec" id="bt-limpar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg>Limpar
+      </button>
+    </div>
+  </div>
+
+  <div id="cache"></div>
+
+  <div class="agenda-corpo">
+    <section class="cartao calendario" aria-labelledby="mes">
+      <div class="cal-nav">
+        <div>
+          <button type="button" class="icone-btn" id="mes-ant" aria-label="Mês anterior"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <h2 id="mes"></h2>
+          <button type="button" class="icone-btn" id="mes-prox" aria-label="Próximo mês"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <button type="button" class="btn btn-sec" id="mes-hoje">Hoje</button>
+      </div>
+      <div class="cal-grade" id="grade"></div>
+      <div class="legenda" style="padding-top:10px;border-top:1px solid #EEF0F4">
+        <span><i class="c-livre"></i>Livre</span>
+        <span><i class="c-parcial"></i>Ainda há turnos livres</span>
+        <span><i class="c-cheio"></i>Sem turnos livres</span>
+        <span><i class="c-off"></i>Passado, bloqueado ou fora dos 15 dias</span>
+        <span style="margin-left:auto">M manhã · V tarde · N noite</span>
+      </div>
+    </section>
+
+    <aside class="cartao painel-dia" aria-live="polite" id="painel">
+      <p class="nota">Toque em um dia para ver os turnos.</p>
+    </aside>
+  </div>
+</main>
+<script type="module" src="js/paginas/sala.js"></script>
+</body>
+</html>

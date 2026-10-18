@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="raiz" content=".">
+<title>Sistema de Reservas</title>
+<meta name="theme-color" content="#40623F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="pagina">
+
+  <section class="cartao boasvindas">
+    <div class="boasvindas-tx">
+      <span class="sobre" id="hoje"></span>
+      <h1>Reserva de salas</h1>
+      <div id="perfil"></div>
+      <p>Escolha a sala, veja os turnos livres no calendário e faça sua reserva. O termo de reserva será enviado para seu WhatsApp ou e-mail. Reservas abertas apenas para os próximos <span id="janela">15</span> dias.</p>
+      <div class="acoes">
+        <button type="button" class="btn" id="filtro-hoje" aria-pressed="false">Salas livres hoje</button>
+        <a href="minhas-reservas.html" class="btn btn-sec">Ver minhas reservas</a>
+      </div>
+    </div>
+    <img src="img/paroquia.png" alt="Fachada da Paróquia São José, Taguatinga Norte" onerror="this.remove()">
+  </section>
+
+  <div id="cache"></div>
+  <div id="conteudo"><p class="carregando">Carregando salas…</p></div>
+
+</main>
+<script type="module" src="js/paginas/inicio.js"></script>
+</body>
+</html>

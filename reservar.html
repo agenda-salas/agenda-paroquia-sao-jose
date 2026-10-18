@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="raiz" content=".">
+<title>Nova reserva · Sistema de Reservas</title>
+<meta name="theme-color" content="#40623F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="pagina">
+  <a href="index.html" class="voltar" id="voltar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Voltar para a agenda</a>
+
+  <form id="form" class="estreito cartao form" novalidate>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <h1 style="font-size:24px">Nova reserva</h1>
+      <span class="nota" id="resumo">Carregando…</span>
+      <div id="perfil" style="margin-top:6px"></div>
+    </div>
+
+    <fieldset style="border:0;padding:0;margin:0">
+      <legend class="campo" style="margin-bottom:8px;padding:0">Turnos pretendidos</legend>
+      <div class="turnos-escolha" id="turnos"></div>
+    </fieldset>
+
+    <label class="campo">Nome do responsável
+      <input type="text" name="nome" autocomplete="name" maxlength="80" required>
+    </label>
+    <label class="campo">Telefone (WhatsApp)
+      <input type="tel" name="telefone" autocomplete="tel" placeholder="(61) 99999-9999" required>
+    </label>
+    <label class="campo">Pastoral ou grupo
+      <input type="text" name="grupo" list="lista-grupos" maxlength="80" placeholder="Ex.: Pastoral da Catequese" required>
+      <datalist id="lista-grupos"></datalist>
+    </label>
+    <fieldset id="extras" class="form" style="border:1px solid var(--borda);border-top:4px solid var(--dourado);border-radius:14px;padding:14px;margin:0" hidden>
+      <legend class="campo" style="padding:0 6px">Dados de quem é de outra paróquia</legend>
+      <label class="campo">Endereço
+        <input type="text" name="endereco" autocomplete="street-address" maxlength="160" placeholder="Rua, número, bairro, cidade">
+      </label>
+      <label class="campo">Paróquia em que atua
+        <input type="text" name="paroquia" maxlength="120" placeholder="Ex.: Paróquia Nossa Senhora de Fátima">
+      </label>
+      <label class="campo">Nome do pároco responsável
+        <input type="text" name="paroco" maxlength="120" placeholder="Ex.: Pe. João da Silva">
+      </label>
+    </fieldset>
+    <label class="campo">Motivo da reserva
+      <textarea name="motivo" rows="3" maxlength="300" placeholder="Ex.: encontro mensal dos catequistas"></textarea>
+    </label>
+
+    <div class="aviso aviso-info" id="regra"></div>
+    <div id="msg" class="aviso" hidden role="alert"></div>
+
+    <div class="acoes">
+      <button type="button" class="btn btn-sec" id="limpar">Limpar</button>
+      <button type="submit" class="btn" style="flex:1" id="enviar">Solicitar reserva</button>
+    </div>
+  </form>
+</main>
+<script type="module" src="js/paginas/reservar.js"></script>
+</body>
+</html>

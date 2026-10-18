@@ -1,0 +1,26 @@
+{
+  "name": "Direcionamento Espiritual",
+  "short_name": "Dir. Espiritual",
+  "description": "Agenda de Direcionamento Espiritual do Pároco da Paróquia São José",
+  "lang": "pt-BR",
+  "start_url": "./atendimentos.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6F7F3",
+  "theme_color": "#40623F",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./atendimentos.html"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Gestão · Sistema de Reservas",
+  "short_name": "Gestão Salas",
+  "description": "Gestão das reservas de salas da Paróquia São José",
+  "lang": "pt-BR",
+  "start_url": "./secretaria.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6F7F3",
+  "theme_color": "#40623F",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./secretaria.html"
+}

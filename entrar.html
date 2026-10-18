@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="raiz" content=".">
+<title>Entrar · Sistema de Reservas</title>
+<meta name="theme-color" content="#40623F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="pagina">
+  <div class="estreito cartao form">
+    <div class="abas" role="tablist">
+      <button type="button" role="tab" id="aba-entrar" aria-selected="true" aria-controls="f-entrar">Entrar</button>
+      <button type="button" role="tab" id="aba-cadastro" aria-selected="false" aria-controls="f-cadastro">Primeiro acesso</button>
+    </div>
+
+    <div id="msg" class="aviso" hidden role="status"></div>
+
+    <form id="f-entrar" class="form" role="tabpanel" aria-labelledby="aba-entrar">
+      <h1 style="font-size:24px">Entrar</h1>
+      <label class="campo">E-mail
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label class="campo">Senha
+        <input type="password" name="senha" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-grande">Entrar</button>
+      <button type="button" class="btn btn-sec" id="esqueci">Esqueci minha senha</button>
+    </form>
+
+    <form id="f-cadastro" class="form" role="tabpanel" aria-labelledby="aba-cadastro" hidden>
+      <h1 style="font-size:24px">Criar acesso</h1>
+      <p class="nota" style="margin:0">Só e-mail e senha. Nome, telefone e pastoral ou grupo são informados em cada reserva.</p>
+      <label class="campo">E-mail
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label class="campo">Senha (mínimo de 6 caracteres)
+        <input type="password" name="senha" autocomplete="new-password" minlength="6" required>
+      </label>
+      <label class="marcar">
+        <input type="checkbox" name="aceite" required>
+        <span>Autorizo a Paróquia São José a guardar meu nome, telefone e e-mail para gerenciar as reservas de salas. Esses dados ficam visíveis apenas para a secretaria.</span>
+      </label>
+      <button type="submit" class="btn btn-grande">Criar acesso e entrar</button>
+    </form>
+
+    <form id="f-nova" class="form" hidden>
+      <h1 style="font-size:24px">Nova senha</h1>
+      <label class="campo">Nova senha (mínimo de 6 caracteres)
+        <input type="password" name="senha" autocomplete="new-password" minlength="6" required>
+      </label>
+      <label class="campo">Repita a nova senha
+        <input type="password" name="confirma" autocomplete="new-password" minlength="6" required>
+      </label>
+      <button type="submit" class="btn btn-grande">Salvar senha</button>
+    </form>
+  </div>
+</main>
+<script type="module" src="js/paginas/entrar.js"></script>
+</body>
+</html>
