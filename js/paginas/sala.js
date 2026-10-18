@@ -53,7 +53,7 @@ function desenharPainel() {
   const regra = sessao?.admin
     ? 'Reserva da secretaria: confirmada na hora, sem antecedência mínima.'
     : perfilAtual() === 'externo'
-    ? `Pedido de outra paróquia: fica pendente até a secretaria aprovar (até ${esc(cfg.prazo_aprovacao_horas || 48)} h).`
+    ? `Não paroquiano: a reserva será confirmada pela secretaria em no máximo ${esc(cfg.prazo_aprovacao_horas || 48)} horas.`
     : sala.controlada
     ? `Esta sala exige aprovação da secretaria. A reserva fica pendente por até ${esc(cfg.prazo_aprovacao_horas || 48)} h.`
     : 'Sala comum: a reserva é confirmada na hora.';

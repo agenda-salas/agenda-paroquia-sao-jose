@@ -109,7 +109,7 @@ function guardarPerfil(v) {
 }
 
 export function nomePerfil(p) {
-  return p === 'externo' ? 'Outra paróquia' : 'Paroquiano';
+  return p === 'externo' ? 'Não paroquiano' : 'Paroquiano';
 }
 
 // Mostra as duas caixas de escolha. Com forcar = false, só pergunta se ainda não escolheu.
@@ -128,12 +128,10 @@ export function escolherPerfil(forcar = false) {
       </div>
       <div class="perfil-opcoes">
         <button type="button" class="perfil-opcao" data-perfil="paroquiano">
-          <b>Sou paroquiano</b>
-          <span>Faço parte da Paróquia São José</span>
+          <b>Sou Paroquiano</b>
         </button>
         <button type="button" class="perfil-opcao" data-perfil="externo">
-          <b>Sou de outra paróquia</b>
-          <span>Toda reserva passa pela aprovação da secretaria</span>
+          <b>Não sou Paroquiano</b>
         </button>
       </div>`;
     document.body.append(dlg);

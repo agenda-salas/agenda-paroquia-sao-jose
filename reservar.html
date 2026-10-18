@@ -38,18 +38,17 @@
       <input type="text" name="grupo" list="lista-grupos" maxlength="80" placeholder="Ex.: Pastoral da Catequese" required>
       <datalist id="lista-grupos"></datalist>
     </label>
-    <fieldset id="extras" class="form" style="border:1px solid var(--borda);border-top:4px solid var(--dourado);border-radius:14px;padding:14px;margin:0" hidden>
-      <legend class="campo" style="padding:0 6px">Dados de quem é de outra paróquia</legend>
-      <label class="campo">Endereço
+    <div id="extras" class="form" hidden>
+      <label class="campo"><span>Endereço <span class="obrig" aria-hidden="true">*</span></span>
         <input type="text" name="endereco" autocomplete="street-address" maxlength="160" placeholder="Rua, número, bairro, cidade">
       </label>
-      <label class="campo">Paróquia em que atua
+      <label class="campo"><span>Paróquia em que atua <span class="obrig" aria-hidden="true">*</span></span>
         <input type="text" name="paroquia" maxlength="120" placeholder="Ex.: Paróquia Nossa Senhora de Fátima">
       </label>
-      <label class="campo">Nome do pároco responsável
+      <label class="campo"><span>Nome do pároco responsável <span class="obrig" aria-hidden="true">*</span></span>
         <input type="text" name="paroco" maxlength="120" placeholder="Ex.: Pe. João da Silva">
       </label>
-    </fieldset>
+    </div>
     <label class="campo">Motivo da reserva
       <textarea name="motivo" rows="3" maxlength="300" placeholder="Ex.: encontro mensal dos catequistas"></textarea>
     </label>

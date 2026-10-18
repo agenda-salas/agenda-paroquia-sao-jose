@@ -58,7 +58,7 @@ function linkAvisar(p, texto, rotulo) {
 // Grupo + dados de quem é de outra paróquia
 function grupoHtml(p) {
   if (p.tipo !== 'externo') return esc(p.grupo);
-  return `${esc(p.grupo)} <span class="etq etq-externo">Outra paróquia</span>
+  return `${esc(p.grupo)} <span class="etq etq-externo">Não paroquiano</span>
     <br><span class="nota">${esc(p.paroquia_origem || '')} · ${esc(p.paroco_responsavel || '')}</span>
     <br><span class="nota">${esc(p.endereco || '')}</span>`;
 }

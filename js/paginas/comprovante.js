@@ -62,7 +62,7 @@ async function iniciar() {
         <dt>Data</dt><dd>${esc(dataLonga(r.data))}</dd>
         <dt>Turno${linhas.length > 1 ? 's' : ''}</dt><dd>${turnos}</dd>
         <dt>Grupo</dt><dd>${esc(r.grupo)}</dd>
-        ${r.tipo === 'externo' ? `<dt>Paróquia</dt><dd>${esc(r.paroquia_origem || '')} <span class="etq etq-externo">Outra paróquia</span></dd>` : ''}
+        ${r.tipo === 'externo' ? `<dt>Paróquia</dt><dd>${esc(r.paroquia_origem || '')} <span class="etq etq-externo">Não paroquiano</span></dd>` : ''}
         <dt>Responsável</dt><dd>${esc(r.responsavel)}</dd>
         ${r.motivo ? `<dt>Motivo</dt><dd style="font-weight:600">${esc(r.motivo)}</dd>` : ''}
       </dl>

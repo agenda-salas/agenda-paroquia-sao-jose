@@ -82,7 +82,7 @@ function desenhar() {
       <section class="secao" aria-labelledby="t-${c}">
         <div class="secao-topo">
           <h2 id="t-${c}">Salas para ${c} pessoas</h2>
-          <span class="nota">${perfilAtual() === 'externo' ? 'Pedido de outra paróquia: aprovação da secretaria' : 'Reserva confirmada na hora'}</span>
+          <span class="nota">${perfilAtual() === 'externo' ? 'Não paroquiano: aprovação da secretaria' : 'Reserva confirmada na hora'}</span>
         </div>
         <div class="grade-salas">${comuns.filter((s) => s.capacidade === c).map(quadro).join('')}</div>
       </section>`;

@@ -126,7 +126,7 @@ async function iniciar() {
 function regra() {
   let texto;
   if (sessao.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
-  else if (perfilAtual() === 'externo') texto = `Pedido de outra paróquia: sua reserva fica pendente até a secretaria aprovar (prazo de até ${cfg.prazo_aprovacao_horas || 48} h).`;
+  else if (perfilAtual() === 'externo') texto = `Sua reserva será confirmada pela secretaria em no máximo ${cfg.prazo_aprovacao_horas || 48} horas.`;
   else if (sala?.controlada) texto = `Sala com aprovação da secretaria: sua reserva fica pendente por até ${cfg.prazo_aprovacao_horas || 48} h, até a secretaria aprovar.`;
   else texto = 'Sala comum: a reserva é confirmada na hora. Alterações e cancelamentos até o início do turno.';
   $('regra').innerHTML = `<span>${esc(texto)}</span>`;

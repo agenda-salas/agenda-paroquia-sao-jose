@@ -100,7 +100,7 @@ h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
 .boasvindas { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; padding: 24px 28px; }
 .boasvindas-tx { flex: 1 1 420px; display: flex; flex-direction: column; gap: 12px; }
 .boasvindas p { margin: 0; font-size: 15px; color: var(--texto-3); max-width: 480px; }
-.boasvindas img { flex: 0 1 360px; width: 360px; height: auto; aspect-ratio: 583 / 268; object-fit: cover; border-radius: 14px; display: block; }
+.boasvindas img { flex: 0 1 540px; width: 540px; max-width: 100%; height: auto; aspect-ratio: 583 / 268; object-fit: cover; border-radius: 14px; display: block; }
 .acoes { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- Quadros de sala ---------- */
@@ -282,8 +282,10 @@ h1, h2 { color: var(--texto); }
 .perfil-cab h2 { font-size: 22px; }
 .perfil-cab p { margin: 0; }
 .perfil-opcoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.perfil-opcao { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 18px; min-height: 110px; border-radius: 16px; border: 2px solid var(--azul); border-top: 4px solid var(--dourado); background: var(--azul); color: var(--branco); cursor: pointer; }
-.perfil-opcao:hover, .perfil-opcao:focus-visible { background: var(--azul-escuro); outline: 3px solid var(--dourado); outline-offset: 2px; }
+.perfil-opcao { font: inherit; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 18px; min-height: 96px; border-radius: 16px; border: 2px solid var(--azul); border-top: 4px solid var(--dourado); background: var(--azul); color: var(--branco); cursor: pointer; box-shadow: 0 2px 4px rgba(47,74,46,.18); transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
+.perfil-opcao:hover, .perfil-opcao:focus-visible { background: var(--azul-escuro); transform: translateY(-4px); box-shadow: 0 12px 24px rgba(47,74,46,.32), 0 3px 6px rgba(47,74,46,.2); outline: 3px solid var(--dourado); outline-offset: 2px; }
+.perfil-opcao:active { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(47,74,46,.25); }
+@media (prefers-reduced-motion: reduce) { .perfil-opcao { transition: none; } .perfil-opcao:hover, .perfil-opcao:focus-visible { transform: none; } }
 .perfil-opcao b { font-size: 18px; }
 .perfil-opcao span { font-size: 13.5px; opacity: .92; }
 .faixa-perfil { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; color: var(--texto-2); background: var(--azul-claro); border: 1px solid var(--azul-borda); padding: 6px 12px; border-radius: 999px; }
@@ -313,3 +315,5 @@ h1, h2 { color: var(--texto); }
 .dlg .tabela input, .dlg .tabela select { font: inherit; font-size: 14px; padding: 8px; border: 1px solid var(--borda-2); border-radius: 8px; }
 .abas-gestao a { flex: 0 0 auto; font-size: 14px; font-weight: 700; padding: 10px 14px; min-height: 44px; border-radius: 9px; color: var(--branco); background: var(--azul); text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; margin-left: auto; }
 .abas-gestao a:hover { background: var(--azul-escuro); color: var(--branco); }
+
+.obrig { color: #B42318; font-weight: 700; }
