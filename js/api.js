@@ -124,8 +124,13 @@ export async function alterarMinhaReserva(codigo, data, turnos) {
 }
 
 export async function minhasReservas() {
+  // Sempre só as reservas da conta logada (a secretaria pode ler todas, mas aqui só aparecem as dela)
+  const { data: sessaoAtual } = await sb.auth.getSession();
+  const uid = sessaoAtual.session?.user?.id;
+  if (!uid) return [];
   const campos = 'codigo, data, status, motivo_recusa, salas(numero, nome), turnos(codigo, nome, inicio, ordem), grupo';
   const busca = (extra) => sb.from('reservas').select(campos + extra)
+    .eq('solicitante_id', uid)
     .gte('data', somaDias(hojeISO(), -30))
     .order('data', { ascending: false });
   let { data, error } = await busca(', oculta_solicitante');
