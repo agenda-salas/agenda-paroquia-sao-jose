@@ -10,13 +10,16 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 <main class="pagina">
   <div class="secao-topo">
     <h1>Minhas reservas</h1>
-    <a href="index.html" class="btn">Nova reserva</a>
+    <div class="acoes">
+      <button type="button" class="btn btn-sec" id="limpar-lista" hidden>Limpar canceladas e recusadas</button>
+      <a href="index.html" class="btn">Nova reserva</a>
+    </div>
   </div>
   <div id="lista"><p class="carregando">Carregando…</p></div>
 </main>

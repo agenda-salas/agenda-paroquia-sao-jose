@@ -124,13 +124,21 @@ export async function alterarMinhaReserva(codigo, data, turnos) {
 }
 
 export async function minhasReservas() {
-  const { data, error } = await sb
-    .from('reservas')
-    .select('codigo, data, status, motivo_recusa, salas(numero, nome), turnos(codigo, nome, inicio, ordem), grupo')
+  const campos = 'codigo, data, status, motivo_recusa, salas(numero, nome), turnos(codigo, nome, inicio, ordem), grupo';
+  const busca = (extra) => sb.from('reservas').select(campos + extra)
     .gte('data', somaDias(hojeISO(), -30))
     .order('data', { ascending: false });
+  let { data, error } = await busca(', oculta_solicitante');
+  if (error) ({ data, error } = await busca(''));   // banco ainda sem a coluna
   if (error) throw error;
-  return data;
+  return (data || []).filter((r) => !r.oculta_solicitante);
+}
+
+// "Limpar canceladas e recusadas": tira da lista da pessoa (a secretaria continua vendo)
+export async function limparMinhasReservas() {
+  const { data, error } = await sb.rpc('limpar_minhas_reservas');
+  if (error) throw new Error(limparErro(error));
+  return data || 0;
 }
 
 export function limparErro(error) {

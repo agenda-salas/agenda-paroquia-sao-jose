@@ -1,5 +1,5 @@
 // Minhas reservas: próximas e recentes, com link para o comprovante
-import { minhasReservas } from '../api.js';
+import { minhasReservas, limparMinhasReservas } from '../api.js';
 import { montarPagina, exigirLogin } from '../ui.js';
 import { hojeISO, dataLonga, esc } from '../util.js';
 
@@ -27,6 +27,10 @@ function cartao(p) {
 async function iniciar() {
   await montarPagina('minhas');
   if (!exigirLogin()) return;
+  iniciarLista();
+}
+
+async function iniciarLista() {
   const el = document.getElementById('lista');
   try {
     const linhas = await minhasReservas();
@@ -41,7 +45,23 @@ async function iniciar() {
     const todos = [...pedidos.values()];
     const proximas = todos.filter((p) => p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
     const passadas = todos.filter((p) => p.data < hoje);
-    if (!todos.length) { el.innerHTML = '<div class="vazio">Você ainda não tem reservas.</div>'; return; }
+    const bt = document.getElementById('limpar-lista');
+    const encerradas = todos.filter((p) => ['cancelada', 'recusada'].includes(p.status));
+    bt.hidden = !encerradas.length;
+    bt.textContent = `Limpar canceladas e recusadas (${encerradas.length})`;
+    bt.onclick = async () => {
+      if (!confirm(`Tirar da sua lista ${encerradas.length === 1 ? 'a reserva cancelada ou recusada' : `as ${encerradas.length} reservas canceladas e recusadas`}? A secretaria continua com o registro.`)) return;
+      bt.disabled = true;
+      try {
+        await limparMinhasReservas();
+        bt.disabled = false;
+        iniciarLista();
+      } catch (e) {
+        bt.disabled = false;
+        alert(e.message);
+      }
+    };
+    if (!todos.length) { el.innerHTML = '<div class="vazio">Você não tem reservas na lista.</div>'; return; }
     el.innerHTML = `
       <section class="secao">
         <h2>Próximas</h2>
