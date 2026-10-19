@@ -1,13 +1,14 @@
-// Direcionamento Espiritual: agenda semanal do Pároco (secretaria e Pároco)
+// Direcionamento Espiritual: agenda semanal do Pároco, dentro da Área de Gestão.
+// Os elementos da página têm o prefixo "at-" (ex.: at-dias, at-msg).
 import { sb, limparErro } from './api.js';
 import {
   esc, hojeISO, somaDias, diaSemana, dataLonga, dataCurta, hora, agoraSP,
   linkWhatsApp, primeiroNome, mascaraTelefone, soDigitos, DIAS_LONGOS, MESES,
 } from './util.js';
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(`at-${id}`);
 const PUBLICO = { paroquianos: 'Paroquianos', enfermos: 'Enfermos' };
-const TIPO = { paroquiano: 'Paroquiano', externo: 'Outra paróquia', enfermo: 'Enfermo' };
+const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'Enfermo' };
 
 let usuario = null;
 let ehSecretaria = false;
@@ -84,51 +85,6 @@ function textoAgendado(a) {
 
 function linkAvisar(a, texto, rotulo = 'Avisar no WhatsApp') {
   return `<a href="${linkWhatsApp(a.telefone, texto)}" target="_blank" rel="noopener">${esc(rotulo)}</a>`;
-}
-
-// ---------------------------------------------------------------- login
-function mostrar(view) {
-  ['v-login', 'v-negado', 'v-agenda'].forEach((v) => { $(v).hidden = v !== view; });
-  $('conta').hidden = view !== 'v-agenda';
-}
-
-async function entrarComUsuario(user) {
-  if (!user) { mostrar('v-login'); return; }
-  const [{ data: pode }, { data: admin }] = await Promise.all([sb.rpc('pode_atender'), sb.rpc('is_admin')]);
-  if (!pode) {
-    $('negado-email').textContent = user.email;
-    mostrar('v-negado');
-    return;
-  }
-  usuario = user;
-  ehSecretaria = !!admin;
-  $('avatar').textContent = (user.email || '?')[0].toUpperCase();
-  $('usuario-nome').textContent = `${user.email} · ${ehSecretaria ? 'Secretaria' : 'Pároco'}`;
-  $('link-gestao').hidden = !ehSecretaria;
-  mostrar('v-agenda');
-  await carregarHorarios();
-  // Se os atendimentos desta semana já passaram, abre direto a próxima
-  const semFuturo = [0, 1, 2, 3, 4, 5, 6].every((i) => slotsDoDia(somaDias(inicioSemana, i)).every((s) => passou(s.data, s.fim)));
-  if (semFuturo && horarios.some((h) => h.ativo)) inicioSemana = somaDias(inicioSemana, 7);
-  await carregarSemana();
-}
-
-function ligarLogin() {
-  $('f-login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = e.target;
-    const bt = f.querySelector('[type=submit]');
-    bt.disabled = true;
-    const { data, error } = await sb.auth.signInWithPassword({ email: f.email.value.trim(), password: f.senha.value });
-    bt.disabled = false;
-    if (error) { erroEm('login-msg', limparErro(error)); $('login-msg').className = 'aviso aviso-erro'; return; }
-    $('login-msg').hidden = true;
-    f.senha.value = '';
-    entrarComUsuario(data.user);
-  });
-  const sair = async () => { await sb.auth.signOut(); usuario = null; mostrar('v-login'); };
-  $('sair').addEventListener('click', sair);
-  $('trocar-conta').addEventListener('click', sair);
 }
 
 // ---------------------------------------------------------------- dados
@@ -327,7 +283,7 @@ function abrirAgendar(slot) {
   $('ag-quando').textContent = `${dataLonga(slot.data)}, ${faixaHora(slot.inicio, slot.fim)} · ${PUBLICO[slot.publico]}`;
   const opcoes = slot.publico === 'enfermos'
     ? [['enfermo', 'Enfermo (atendimento no endereço informado)']]
-    : [['paroquiano', 'Paroquiano'], ['externo', 'Pessoa de outra paróquia (precisa de liberação da secretaria)']];
+    : [['paroquiano', 'Paroquiano'], ['externo', 'Não paroquiano (precisa de liberação da secretaria)']];
   $('ag-tipos').innerHTML = '<legend class="campo" style="padding:0;margin-bottom:8px">Quem será atendido</legend>'
     + opcoes.map(([v, t], i) => `<label class="marcar"><input type="radio" name="tipo" value="${v}" ${i === 0 ? 'checked' : ''}>${esc(t)}</label>`).join('');
   $('ag-tipos').querySelectorAll('input').forEach((r) => r.addEventListener('change', ajustarCampos));
@@ -488,27 +444,27 @@ function ligarHorarios() {
 }
 
 // ---------------------------------------------------------------- início
-async function iniciar() {
-  ligarLogin();
-  ligarAgendar();
-  ligarBloquear();
-  ligarHorarios();
-  document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
-  $('sem-ant').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, -7); carregarSemana(); });
-  $('sem-prox').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, 7); carregarSemana(); });
-  $('sem-hoje').addEventListener('click', () => { inicioSemana = segundaDe(hojeISO()); carregarSemana(); });
-  $('bt-bloquear').addEventListener('click', () => abrirBloquear());
-  $('bt-horarios').addEventListener('click', abrirHorarios);
+let ligado = false;
 
-  const { data } = await sb.auth.getSession();
-  try {
-    await entrarComUsuario(data.session?.user || null);
-  } catch (e) {
-    aviso('erro', limparErro(e));
+// Abre a agenda dentro da Área de Gestão (aba "Direcionamento Espiritual")
+export async function abrirAgendaParoco({ user, secretaria }) {
+  usuario = user;
+  ehSecretaria = !!secretaria;
+  if (!ligado) {
+    ligado = true;
+    ligarAgendar();
+    ligarBloquear();
+    ligarHorarios();
+    document.querySelectorAll('dialog[id^="at-"] [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+    $('sem-ant').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, -7); carregarSemana(); });
+    $('sem-prox').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, 7); carregarSemana(); });
+    $('sem-hoje').addEventListener('click', () => { inicioSemana = segundaDe(hojeISO()); carregarSemana(); });
+    $('bt-bloquear').addEventListener('click', () => abrirBloquear());
+    $('bt-horarios').addEventListener('click', abrirHorarios);
+    await carregarHorarios();
+    // Se os atendimentos desta semana já passaram, abre direto a próxima
+    const semFuturo = [0, 1, 2, 3, 4, 5, 6].every((i) => slotsDoDia(somaDias(inicioSemana, i)).every((s) => passou(s.data, s.fim)));
+    if (semFuturo && horarios.some((h) => h.ativo)) inicioSemana = somaDias(inicioSemana, 7);
   }
+  await carregarSemana();
 }
-
-iniciar();
-
-// Permite instalar como app no celular (PWA)
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

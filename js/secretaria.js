@@ -2,9 +2,10 @@
 import { sb, limparErro, nomeSala, carregarTurnos } from './api.js';
 import { esc, hojeISO, somaDias, dataLonga, dataCurta, faixa, linkWhatsApp, primeiroNome, DIAS_CURTOS, diaSemana } from './util.js';
 import { linkComprovante } from './comprovante.js';
+import { abrirAgendaParoco } from './agenda-paroco.js';
 
 const $ = (id) => document.getElementById(id);
-const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config'];
+const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento'];
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
   confirmada: ['Confirmada', 'etq-ok'], pendente: ['Pendente', 'etq-pend'], recusada: ['Recusada', 'etq-res'],
@@ -13,6 +14,7 @@ const SITUACAO = {
 };
 
 let usuario = null;
+let ehSecretaria = false;   // false = Pároco (vê só o Direcionamento Espiritual)
 let salas = [];
 let turnos = [];
 let recuperandoSenha = false;
@@ -76,17 +78,23 @@ function mostrar(view) {
 
 async function entrarComUsuario(user) {
   if (!user) { mostrar('v-login'); return; }
-  const { data: admin, error } = await sb.rpc('is_admin');
+  const [{ data: admin, error }, { data: pode }] = await Promise.all([sb.rpc('is_admin'), sb.rpc('pode_atender')]);
   if (error) { mostrar('v-login'); mostrarLoginMsg('erro', limparErro(error)); return; }
-  if (!admin) {
+  if (!admin && !pode) {
     $('negado-email').textContent = user.email;
     mostrar('v-negado');
     return;
   }
   usuario = user;
+  ehSecretaria = !!admin;
   $('avatar').textContent = (user.email || '?')[0].toUpperCase();
   $('usuario-nome').textContent = user.email;
+  // O Pároco vê só a aba do Direcionamento Espiritual
+  document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => { b.hidden = !ehSecretaria && b.dataset.aba !== 'direcionamento'; });
+  document.querySelector('.marca-titulo').textContent = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
+  document.title = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
   mostrar('v-gestao');
+  if (!ehSecretaria) { abrirAba('direcionamento'); return; }
 
   const [{ data: s, error: e1 }, rt] = await Promise.all([
     sb.from('salas').select('*').order('ordem').order('numero'),
@@ -159,9 +167,11 @@ const CARREGAR = {
   salas: carregarSalas,
   coordenadores: carregarCoordenadores,
   config: carregarConfig,
+  direcionamento: () => abrirAgendaParoco({ user: usuario, secretaria: ehSecretaria }),
 };
 
 function abrirAba(nome) {
+  if (!ehSecretaria) nome = 'direcionamento';
   history.replaceState(null, '', `#${nome}`);
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === nome)));
   ABAS.forEach((a) => { $(`aba-${a}`).hidden = a !== nome; });
