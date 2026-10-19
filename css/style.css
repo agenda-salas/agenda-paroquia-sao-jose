@@ -359,3 +359,8 @@ h1, h2 { color: var(--texto); }
 @media (max-width: 640px) { .secao-grupo-sep { margin-top: 36px; padding-top: 28px; } .titulo-grupo { font-size: 20px; } }
 .secao-grupo { margin-bottom: 6px; }
 #conteudo > .secao + .secao { margin-top: 14px; }
+
+/* Comprovante: alterar / cancelar */
+.comp-gerir { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid var(--borda); }
+.comp-gerir .btn { min-width: 180px; }
+.aviso-alterando { border-left: 4px solid var(--dourado); }

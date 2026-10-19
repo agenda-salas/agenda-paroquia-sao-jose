@@ -1,5 +1,5 @@
 // Formulário de reserva: nome, telefone e grupo informados a cada reserva
-import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, criarReserva, nomeSala } from '../api.js';
+import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, criarReserva, nomeSala, dadosDaMinhaReserva, alterarMinhaReserva } from '../api.js';
 import { montarPagina, exigirLogin, mostrarAviso, sessao, escolherPerfil, faixaPerfil, perfilAtual } from '../ui.js';
 import { param, dataLonga, faixa, esc, mascaraTelefone, soDigitos } from '../util.js';
 import { indexarAgenda, situacaoTurno, turnoReservavel } from '../calendario.js';
@@ -9,10 +9,13 @@ const salaId = Number(param('sala'));
 const data = param('data');
 const pedidos = (param('turnos') || '').split(',').filter(Boolean);
 let sala, cfg = {}, enviando = false;
+const alterando = (param('alterar') || '').toUpperCase();   // código da reserva que está sendo alterada
+let antigas = [];                                             // turnos ativos da reserva antiga
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
 
 // Mostra ou esconde os campos de quem é de outra paróquia
 function aplicarPerfil() {
+  if (alterando) { regra(); return; }
   const f = $('form');
   const externo = perfilAtual() === 'externo';
   $('extras').hidden = !externo;
@@ -44,9 +47,27 @@ async function iniciar() {
 
   const f = $('form');
   mascaraTelefone(f.telefone);
-  preencherDados();
-  await escolherPerfil();
-  faixaPerfil($('perfil'));
+  if (alterando) {
+    // Modo alteração: os dados da reserva continuam os mesmos; só mudam o dia e os turnos
+    try { antigas = (await dadosDaMinhaReserva(alterando)).filter((r) => ['pendente', 'confirmada'].includes(r.status)); } catch { antigas = []; }
+    if (!antigas.length) {
+      mostrarAviso($('msg'), 'erro', `A reserva ${alterando} não pode mais ser alterada.`);
+      $('enviar').disabled = true;
+      return;
+    }
+    f.querySelector('h1').textContent = 'Alterar reserva';
+    $('enviar').textContent = 'Confirmar alteração';
+    $('voltar').href = `comprovante.html?c=${encodeURIComponent(alterando)}`;
+    $('voltar').lastChild.textContent = 'Voltar à reserva';
+    [f.nome, f.telefone, f.grupo, f.motivo].forEach((i) => { i.closest('label').hidden = true; i.required = false; });
+    $('extras').hidden = true;
+    $('limpar').hidden = true;
+    $('perfil').innerHTML = `<span class="faixa-perfil">Alterando a reserva <b>${esc(alterando)}</b></span>`;
+  } else {
+    preencherDados();
+    await escolherPerfil();
+    faixaPerfil($('perfil'));
+  }
 
   try {
     const [sl, c, rt, ra, rb, grupos] = await Promise.all([
@@ -60,6 +81,8 @@ async function iniciar() {
     $('lista-grupos').innerHTML = grupos.map((g) => `<option value="${esc(g)}"></option>`).join('');
 
     const ctx = { turnos: rt.dados, indice: indexarAgenda(ra.dados), bloqueios: rb.dados };
+    // Na alteração, os turnos da própria reserva antiga contam como livres
+    antigas.filter((o) => o.sala_id === salaId).forEach((o) => ctx.indice.delete(`${salaId}|${o.data}|${o.turnos.codigo}`));
     $('turnos').innerHTML = ctx.turnos.map((t) => {
       const st = situacaoTurno(ctx, salaId, data, t);
       if (st.s === 'X') return `<label class="indisp"><input type="checkbox" disabled><b>${t.nome}</b><span>Não funciona</span></label>`;
@@ -87,6 +110,21 @@ async function iniciar() {
     if (enviando) return;
     const turnos = [...f.querySelectorAll('input[name="turno"]:checked')].map((i) => i.value);
     if (!turnos.length) return mostrarAviso($('msg'), 'erro', 'Escolha pelo menos um turno.');
+    if (alterando) {
+      enviando = true;
+      $('enviar').disabled = true;
+      $('enviar').textContent = 'Alterando…';
+      try {
+        const novo = await alterarMinhaReserva(alterando, data, turnos);
+        location.href = `comprovante.html?c=${encodeURIComponent(novo)}&novo=1`;
+      } catch (err) {
+        mostrarAviso($('msg'), 'erro', `${err.message} A reserva ${alterando} continua valendo.`);
+        enviando = false;
+        $('enviar').disabled = false;
+        $('enviar').textContent = 'Confirmar alteração';
+      }
+      return;
+    }
     if (!f.nome.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o nome do responsável.');
     if (soDigitos(f.telefone.value).length < 10) return mostrarAviso($('msg'), 'erro', 'Informe o telefone com DDD.');
     if (!f.grupo.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a pastoral ou o grupo.');
@@ -127,7 +165,12 @@ async function iniciar() {
 
 function regra() {
   let texto;
-  if (sessao.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
+  if (alterando) {
+    const aprovacao = sala?.controlada || antigas.some((o) => o.tipo === 'externo');
+    texto = `A reserva ${alterando} será cancelada e substituída por esta, com um novo código. `
+      + (aprovacao ? `A nova reserva passa de novo pela aprovação da secretaria (até ${cfg.prazo_aprovacao_horas || 48} horas).` : 'A nova reserva é confirmada na hora.')
+      + ' Se o novo horário não estiver disponível, nada muda.';
+  } else if (sessao.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
   else if (perfilAtual() === 'externo') texto = `Sua reserva será confirmada pela secretaria em no máximo ${cfg.prazo_aprovacao_horas || 48} horas.`;
   else if (sala?.controlada) texto = `Sala com aprovação da secretaria: sua reserva fica pendente por até ${cfg.prazo_aprovacao_horas || 48} h, até a secretaria aprovar.`;
   else texto = 'Sala comum: a reserva é confirmada na hora. Alterações e cancelamentos até o início do turno.';

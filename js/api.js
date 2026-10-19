@@ -103,6 +103,26 @@ export async function obterComprovante(codigo) {
   return data || [];
 }
 
+// Turnos do pedido (só o dono ou a secretaria conseguem ler)
+export async function dadosDaMinhaReserva(codigo) {
+  const { data, error } = await sb.from('reservas')
+    .select('codigo, sala_id, data, status, tipo, turnos(codigo, inicio, ordem)')
+    .eq('codigo', codigo);
+  if (error) throw new Error(limparErro(error));
+  return data || [];
+}
+
+export async function cancelarMinhaReserva(codigo) {
+  const { error } = await sb.rpc('cancelar_minha_reserva', { p_codigo: codigo });
+  if (error) throw new Error(limparErro(error));
+}
+
+export async function alterarMinhaReserva(codigo, data, turnos) {
+  const { data: novo, error } = await sb.rpc('alterar_minha_reserva', { p_codigo: codigo, p_data: data, p_turnos: turnos });
+  if (error) throw new Error(limparErro(error));
+  return novo;
+}
+
 export async function minhasReservas() {
   const { data, error } = await sb
     .from('reservas')

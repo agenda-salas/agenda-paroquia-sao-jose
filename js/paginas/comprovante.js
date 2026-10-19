@@ -1,5 +1,5 @@
 // Comprovante (link único): mostra sempre os dados atuais da reserva
-import { obterComprovante } from '../api.js';
+import { obterComprovante, dadosDaMinhaReserva, cancelarMinhaReserva } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
 import { param, dataLonga, faixa, esc, ICONES } from '../util.js';
 import { compartilhar } from '../comprovante.js';
@@ -36,6 +36,15 @@ async function iniciar() {
   const valido = r.status === 'confirmada';
   const podeCompartilhar = ['confirmada', 'pendente'].includes(r.status);
   const ehDono = !!sessao;
+
+  // Cancelar/alterar: só o dono, reserva ativa e antes do início do turno
+  let minhas = [];
+  if (sessao && ['pendente', 'confirmada'].includes(r.status)) {
+    try { minhas = await dadosDaMinhaReserva(r.codigo); } catch { minhas = []; }
+  }
+  const ativas = minhas.filter((m) => ['pendente', 'confirmada'].includes(m.status));
+  const comecou = (m) => new Date(`${m.data}T${m.turnos.inicio.slice(0, 5)}:00-03:00`).getTime() <= Date.now();
+  const podeMexer = ativas.length > 0 && !ativas.some(comecou);
 
   let nota = '';
   if (r.status === 'pendente') nota = 'A secretaria vai analisar o pedido. Guarde este link: quando a reserva for aprovada, esta página mostrará o comprovante confirmado.';
@@ -77,11 +86,32 @@ async function iniciar() {
       <div id="comp-msg" class="aviso" hidden role="status"></div>
     </div>` : ''}
 
+    ${podeMexer ? `
+    <div class="nao-imprimir comp-gerir">
+      <a class="btn btn-grande" style="flex:1" href="sala.html?id=${ativas[0].sala_id}&data=${ativas[0].data}&alterar=${encodeURIComponent(r.codigo)}">Alterar reserva</a>
+      <button type="button" class="btn btn-perigo btn-grande" style="flex:1" id="cancelar-reserva">Cancelar reserva</button>
+    </div>
+    <div id="gerir-msg" class="aviso nao-imprimir" hidden role="alert"></div>` : ''}
+
     <div class="nao-imprimir acoes" style="justify-content:center">
       <a href="index.html" class="btn btn-sec">Voltar às salas</a>
       ${ehDono ? '<a href="minhas-reservas.html" class="btn btn-sec">Minhas reservas</a>' : ''}
     </div>`;
 
+  document.getElementById('cancelar-reserva')?.addEventListener('click', async (e) => {
+    if (!confirm(`Cancelar a reserva ${r.codigo}? O turno fica livre para outros grupos. Esta ação não pode ser desfeita.`)) return;
+    e.target.disabled = true;
+    try {
+      await cancelarMinhaReserva(r.codigo);
+      location.reload();
+    } catch (err) {
+      e.target.disabled = false;
+      const m = document.getElementById('gerir-msg');
+      m.className = 'aviso aviso-erro nao-imprimir';
+      m.textContent = err.message;
+      m.hidden = false;
+    }
+  });
   document.getElementById('baixar')?.addEventListener('click', () => window.print());
   document.getElementById('compartilhar')?.addEventListener('click', async () => {
     const resultado = await compartilhar(linhas);

@@ -28,7 +28,8 @@ function atualizarBotao() {
 function irParaReserva() {
   const t = turnosMarcados();
   if (!t.length || !diaSel) return;
-  location.href = `reservar.html?sala=${salaId}&data=${diaSel}&turnos=${t.join(',')}`;
+  const alt = param('alterar');
+  location.href = `reservar.html?sala=${salaId}&data=${diaSel}&turnos=${t.join(',')}${alt ? `&alterar=${encodeURIComponent(alt)}` : ''}`;
 }
 
 function desenharPainel() {
@@ -128,6 +129,12 @@ async function iniciar() {
     document.title = `${nomeSala(sala)} · Sistema de Reservas`;
     $('sala-nome').textContent = nomeSala(sala);
     $('sala-tipo').textContent = `${sala.tipo === 'palestra' ? 'Sala de palestra' : 'Sala'} para ${sala.capacidade} pessoas · ${sala.controlada ? 'aprovação da secretaria' : 'confirmação na hora'}`;
+    if (param('alterar')) {
+      const b = document.createElement('div');
+      b.className = 'aviso aviso-info aviso-alterando';
+      b.innerHTML = `<span><b>Alterando a reserva ${esc(param('alterar'))}.</b> Escolha o novo dia e os turnos, depois toque em Reservar. A reserva atual só é cancelada quando a nova for confirmada.</span>`;
+      document.querySelector('.agenda-topo').before(b);
+    }
     const d = param('data');
     if (d) { diaSel = d; [ano, mes] = d.split('-').map(Number); }
     await carregarMes();
