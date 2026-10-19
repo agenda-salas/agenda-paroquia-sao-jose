@@ -239,7 +239,8 @@ returns table (
   motivo_recusa text,
   regras        text,
   tipo          text,
-  paroquia_origem text
+  paroquia_origem text,
+  itens         jsonb
 )
 language sql stable security definer set search_path = public
 as $$
@@ -262,7 +263,8 @@ as $$
          r.motivo_recusa,
          cfg('texto_regras'),
          r.tipo,
-         r.paroquia_origem
+         r.paroquia_origem,
+         s.itens
     from reservas r
     join salas s   on s.id = r.sala_id
     join turnos t  on t.id = r.turno_id

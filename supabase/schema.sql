@@ -36,6 +36,7 @@ create table if not exists salas (
   controlada  boolean not null default false,   -- exige aprovação da secretaria
   ativa       boolean not null default true,
   ordem       int not null default 0,
+  itens       jsonb not null default '[]',              -- itens da sala: [{"descricao": "Cadeiras", "quantidade": 30}]
   criado_em   timestamptz not null default now()
 );
 

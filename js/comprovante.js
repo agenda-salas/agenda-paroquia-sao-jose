@@ -6,6 +6,8 @@ export function linkComprovante(codigo) {
   return `${SITE_URL}/comprovante.html?c=${encodeURIComponent(codigo)}`;
 }
 
+export const TEXTO_ITENS = 'Você receberá a sala com os itens abaixo. Ao fim da reserva deixe-os da forma como os encontrou. Qualquer ocorrência procure a secretaria da Paróquia no primeiro horário útil seguinte.';
+
 export function textoComprovante(linhas) {
   const r = linhas[0];
   const turnos = linhas.map((l) => `${l.turno} (${faixa(l)})`).join(', ');
@@ -18,6 +20,7 @@ export function textoComprovante(linhas) {
     `Turno: ${turnos}`,
     `Grupo: ${r.grupo}`,
     `Responsável: ${r.responsavel}`,
+    ...((r.itens || []).length ? ['', TEXTO_ITENS, ...r.itens.map((i) => `• ${i.descricao}${i.quantidade ? `: ${i.quantidade}` : ''}`)] : []),
     '',
     'Confira a situação atual:',
   ].join('\n');

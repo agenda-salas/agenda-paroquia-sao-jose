@@ -364,3 +364,14 @@ h1, h2 { color: var(--texto); }
 .comp-gerir { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid var(--borda); }
 .comp-gerir .btn { min-width: 180px; }
 .aviso-alterando { border-left: 4px solid var(--dourado); }
+
+/* Itens da sala: comprovante e cadastro */
+.comp-itens { padding: 14px 20px 16px; border-top: 1px dashed var(--borda-2); display: flex; flex-direction: column; gap: 10px; }
+.comp-itens p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--texto-2); }
+.comp-itens ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; }
+.comp-itens li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--borda); }
+.comp-itens li b { color: var(--azul-escuro); }
+.itens-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.item-linha { display: grid; grid-template-columns: 1fr 96px auto; gap: 8px; align-items: center; }
+.item-linha input { font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--borda-2); border-radius: 10px; min-width: 0; }
+@media (max-width: 520px) { .item-linha { grid-template-columns: 1fr 72px; } .item-linha .btn { grid-column: 1 / -1; justify-self: start; } }

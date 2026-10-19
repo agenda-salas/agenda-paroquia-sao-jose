@@ -2,7 +2,7 @@
 import { obterComprovante, dadosDaMinhaReserva, cancelarMinhaReserva } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
 import { param, dataLonga, faixa, esc, ICONES } from '../util.js';
-import { compartilhar } from '../comprovante.js';
+import { compartilhar, TEXTO_ITENS } from '../comprovante.js';
 
 const STATUS = {
   confirmada:     { titulo: 'Reserva confirmada', cor: 'var(--verde-tx)', fundo: 'var(--verde-bg)', icone: 'ok' },
@@ -75,6 +75,11 @@ async function iniciar() {
         <dt>Responsável</dt><dd>${esc(r.responsavel)}</dd>
         ${r.motivo ? `<dt>Motivo</dt><dd style="font-weight:600">${esc(r.motivo)}</dd>` : ''}
       </dl>
+      ${(r.itens || []).length ? `
+      <div class="comp-itens">
+        <p>${esc(TEXTO_ITENS)}</p>
+        <ul>${r.itens.map((i) => `<li><span>${esc(i.descricao)}</span>${i.quantidade ? `<b>${esc(i.quantidade)}</b>` : ''}</li>`).join('')}</ul>
+      </div>` : ''}
       ${nota ? `<div class="comp-regras" style="background:${st.fundo};color:${st.cor};font-weight:600">${nota}</div>` : ''}
       <div class="comp-regras">${esc(r.regras || '')}</div>
     </section>

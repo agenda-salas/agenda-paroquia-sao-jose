@@ -459,13 +459,15 @@ async function carregarSalas() {
 
   $('salas-linhas').innerHTML = salas.filter((s) => !s.excluida_em).map((s) => `
     <tr>
-      <td><b>${esc(nomeSala(s))}</b>${s.nome ? ` <span class="nota">(nº ${esc(s.numero)})</span>` : ''}</td>
+      <td><b>${esc(nomeSala(s))}</b>${s.nome ? ` <span class="nota">(nº ${esc(s.numero)})</span>` : ''}
+        <br><span class="nota">${(s.itens || []).length ? `${s.itens.length} ${s.itens.length === 1 ? 'item' : 'itens'}` : 'Sem itens cadastrados'}</span></td>
       <td>${s.capacidade} pessoas</td>
       <td>${s.tipo === 'palestra' ? 'Sala de palestra' : 'Sala comum'}</td>
       <td><span class="etq ${s.controlada ? 'etq-pend' : 'etq-azul'}">${s.controlada ? 'Exige aprovação' : 'Na hora'}</span></td>
       <td><span class="etq ${s.ativa ? 'etq-ok' : 'etq-bloq'}">${s.ativa ? 'Ativa' : 'Desativada'}</span></td>
       <td><span class="acoes-cel">
         <button type="button" class="btn btn-sec btn-peq" data-editar="${s.id}">Alterar</button>
+        <button type="button" class="btn btn-sec btn-peq" data-itens="${s.id}">Itens</button>
         <button type="button" class="btn btn-sec btn-peq" data-ativar="${s.id}">${s.ativa ? 'Desativar' : 'Reativar'}</button>
         <button type="button" class="btn btn-perigo btn-peq" data-excluir-sala="${s.id}">Excluir</button>
       </span></td>
@@ -473,7 +475,64 @@ async function carregarSalas() {
 
   $('salas-linhas').querySelectorAll('[data-editar]').forEach((b) => b.addEventListener('click', () => editarSala(Number(b.dataset.editar))));
   $('salas-linhas').querySelectorAll('[data-ativar]').forEach((b) => b.addEventListener('click', () => alternarSala(Number(b.dataset.ativar))));
+  $('salas-linhas').querySelectorAll('[data-itens]').forEach((b) => b.addEventListener('click', () => abrirItens(Number(b.dataset.itens))));
   $('salas-linhas').querySelectorAll('[data-excluir-sala]').forEach((b) => b.addEventListener('click', () => excluirSala(Number(b.dataset.excluirSala))));
+}
+
+// ---------------------------------------------------------------- itens da sala
+let itensSalaId = null;
+let itensEdicao = [];
+
+function abrirItens(id) {
+  const s = salaPorId(id);
+  itensSalaId = id;
+  itensEdicao = (s.itens || []).map((i) => ({ descricao: i.descricao || '', quantidade: i.quantidade ?? '' }));
+  if (!itensEdicao.length) itensEdicao.push({ descricao: '', quantidade: '' });
+  $('it-titulo').textContent = `Itens da ${nomeSala(s)}`;
+  $('it-erro').hidden = true;
+  desenharItens();
+  $('dlg-itens').showModal();
+}
+
+function desenharItens() {
+  $('it-linhas').innerHTML = itensEdicao.map((i, n) => `
+    <li class="item-linha" data-n="${n}">
+      <input type="text" data-c="descricao" value="${esc(i.descricao)}" maxlength="80" placeholder="Ex.: Cadeiras" aria-label="Descrição do item">
+      <input type="number" data-c="quantidade" value="${esc(i.quantidade)}" min="1" max="9999" placeholder="Qtd." aria-label="Quantidade">
+      <button type="button" class="btn btn-perigo btn-peq" data-rem="${n}" aria-label="Remover item">Remover</button>
+    </li>`).join('') || '<li class="nota">Nenhum item. Use "Adicionar item".</li>';
+  $('it-linhas').querySelectorAll('[data-c]').forEach((el) => el.addEventListener('input', () => {
+    itensEdicao[Number(el.closest('li').dataset.n)][el.dataset.c] = el.value;
+  }));
+  $('it-linhas').querySelectorAll('[data-rem]').forEach((b) => b.addEventListener('click', () => {
+    itensEdicao.splice(Number(b.dataset.rem), 1);
+    desenharItens();
+  }));
+}
+
+function ligarItens() {
+  $('it-novo').addEventListener('click', () => {
+    itensEdicao.push({ descricao: '', quantidade: '' });
+    desenharItens();
+    $('it-linhas').querySelector('li:last-child input')?.focus();
+  });
+  document.querySelector('[data-fechar-itens]').addEventListener('click', () => $('dlg-itens').close());
+  $('f-itens').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const itens = itensEdicao
+      .map((i) => ({ descricao: String(i.descricao).trim(), quantidade: i.quantidade === '' ? null : Number(i.quantidade) }))
+      .filter((i) => i.descricao);
+    if (itens.some((i) => i.quantidade !== null && !(i.quantidade > 0))) {
+      $('it-erro').textContent = 'A quantidade precisa ser um número maior que zero (ou fique em branco).';
+      $('it-erro').hidden = false;
+      return;
+    }
+    const { error } = await sb.from('salas').update({ itens: itens.map((i) => (i.quantidade ? i : { descricao: i.descricao })) }).eq('id', itensSalaId);
+    if (error) { $('it-erro').textContent = limparErro(error); $('it-erro').hidden = false; return; }
+    $('dlg-itens').close();
+    aviso('ok', `Itens da ${nomeSala(salaPorId(itensSalaId))} salvos.`);
+    carregarSalas();
+  });
 }
 
 async function excluirSala(id) {
@@ -665,6 +724,7 @@ async function iniciar() {
   ligarLogin();
   ligarBloqueios();
   ligarSalas();
+  ligarItens();
   ligarConfig();
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
   $('f-filtro').addEventListener('change', (e) => { if (e.target.name !== 'busca') carregarReservas().catch((er) => aviso('erro', limparErro(er))); });
