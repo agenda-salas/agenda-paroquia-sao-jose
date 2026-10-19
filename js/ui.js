@@ -41,7 +41,6 @@ export async function montarPagina(ativo) {
       <nav class="menu" aria-label="Principal">
         <a href="${raiz}/index.html" class="${ativo === 'salas' ? 'ativo' : ''}">Salas</a>
         ${sessao ? `<a href="${raiz}/minhas-reservas.html" class="${ativo === 'minhas' ? 'ativo' : ''}">Minhas reservas</a>` : ''}
-        <a href="${raiz}/direcionamento.html" class="${ativo === 'direcionamento' ? 'ativo' : ''}">Direcionamento Espiritual</a>
         ${conta}
       </nav>
     </div>`;
