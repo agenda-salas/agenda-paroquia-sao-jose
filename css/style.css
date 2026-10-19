@@ -379,3 +379,8 @@ h1, h2 { color: var(--texto); }
 
 /* Na tela o topo do site já identifica a paróquia; a marca do comprovante só sai no PDF/impressão */
 @media screen { .comp-marca { display: none; } }
+
+/* Topo da Área de Gestão: título em verde, negrito, tamanho de título, e faixa dourada */
+.topo-gestao { border-bottom: 4px solid var(--dourado); }
+.topo-gestao .marca-titulo { font-size: 28px; font-weight: 800; color: var(--azul); }
+@media (max-width: 640px) { .topo-gestao .marca-titulo { font-size: 21px; } }
