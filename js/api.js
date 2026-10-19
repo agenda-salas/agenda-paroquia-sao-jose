@@ -139,6 +139,18 @@ export async function minhasReservas() {
   return (data || []).filter((r) => !r.oculta_solicitante);
 }
 
+// Pedidos de Direcionamento Espiritual da própria pessoa
+export async function meusAtendimentos() {
+  const { data, error } = await sb.rpc('meus_atendimentos');
+  if (error) return [];
+  return data || [];
+}
+
+export async function cancelarMeuAtendimento(id) {
+  const { error } = await sb.rpc('cancelar_meu_atendimento', { p_id: id });
+  if (error) throw new Error(limparErro(error));
+}
+
 // "Limpar canceladas e recusadas": tira da lista da pessoa (a secretaria continua vendo)
 export async function limparMinhasReservas() {
   const { data, error } = await sb.rpc('limpar_minhas_reservas');

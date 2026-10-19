@@ -11,13 +11,6 @@ const $ = (id) => document.getElementById(id);
 const DIAS = 14;
 const PUBLICO = { paroquianos: 'Paroquianos', enfermos: 'Enfermos' };
 const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'Enfermo' };
-const STATUS = {
-  solicitado: ['etq-pend', 'Aguardando confirmação'],
-  pendente: ['etq-pend', 'Aguardando a secretaria'],
-  agendado: ['etq-ok', 'Confirmado'],
-  realizado: ['etq-azul', 'Realizado'],
-  cancelado: ['etq-cancel', 'Cancelado'],
-};
 
 let horarios = [], ocupados = [], bloqueios = [];
 let slotAtual = null;
@@ -108,35 +101,6 @@ function desenharDias() {
   $('dias').querySelectorAll('.dir-hora[data-data]').forEach((b) => b.addEventListener('click', () => abrirPedido({ ...b.dataset })));
 }
 
-async function carregarMeus() {
-  if (!sessao) { $('sec-meus').hidden = true; return; }
-  const { data, error } = await sb.rpc('meus_atendimentos');
-  if (error || !data?.length) { $('sec-meus').hidden = true; return; }
-  $('sec-meus').hidden = false;
-  $('meus').innerHTML = data.map((a) => {
-    const [cls, txt] = STATUS[a.status] || ['etq-azul', a.status];
-    const podeCancelar = ['solicitado', 'pendente', 'agendado'].includes(a.status) && !passou(a.data, a.inicio);
-    return `
-      <li class="cartao dir-meu">
-        <div>
-          <b>${esc(dataLonga(a.data))}, às ${esc(hh(a.inicio))}</b>
-          <span class="nota">${esc(TIPO[a.tipo] || '')}</span>
-        </div>
-        <div class="acoes">
-          <span class="etq ${cls}">${esc(txt)}</span>
-          ${podeCancelar ? `<button type="button" class="btn btn-sec btn-peq" data-cancelar="${a.id}">Cancelar pedido</button>` : ''}
-        </div>
-      </li>`;
-  }).join('');
-  $('meus').querySelectorAll('[data-cancelar]').forEach((b) => b.addEventListener('click', async () => {
-    if (!confirm('Cancelar este pedido? O horário fica livre para outra pessoa.')) return;
-    const { error: e } = await sb.rpc('cancelar_meu_atendimento', { p_id: Number(b.dataset.cancelar) });
-    if (e) return aviso('erro', limparErro(e));
-    aviso('ok', 'Pedido cancelado.');
-    await Promise.all([carregar(), carregarMeus()]);
-  }));
-}
-
 // ---------------------------------------------------------------- pedido
 function abrirPedido(slot) {
   if (!sessao) {
@@ -208,8 +172,9 @@ function ligarPedido() {
     if (error) return erro(limparErro(error));
     $('dlg-pedir').close();
     aviso('ok', `Pedido enviado para ${dataLonga(slotAtual.data).toLowerCase()}, às ${hh(slotAtual.inicio)}. `
-      + (tipo === 'externo' ? 'A secretaria confirma em no máximo 48 horas.' : 'Você será avisado pelo WhatsApp quando for confirmado.'));
-    await Promise.all([carregar(), carregarMeus()]);
+      + (tipo === 'externo' ? 'A secretaria confirma em no máximo 48 horas.' : 'Você será avisado pelo WhatsApp quando for confirmado.')
+      + ' Acompanhe em Minhas reservas.');
+    await carregar();
   });
   document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 }
@@ -219,7 +184,7 @@ async function iniciar() {
   await montarPagina('direcionamento');
   ligarPedido();
   try {
-    await Promise.all([carregar(), carregarMeus()]);
+    await carregar();
   } catch (e) {
     $('dias').innerHTML = '';
     aviso('erro', `Não foi possível carregar a agenda. ${limparErro(e)}`);
