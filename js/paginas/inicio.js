@@ -76,12 +76,20 @@ function desenhar() {
         ${destaque.map(quadroDestaque).join('')}
       </section>`;
   }
-  html += legenda;
+  if (caps.length) {
+    html += `
+      <div class="secao-grupo${destaque.length ? ' secao-grupo-sep' : ''}">
+        <h2 class="titulo-grupo">Salas sem aprovação da secretaria</h2>
+        ${legenda}
+      </div>`;
+  } else {
+    html += legenda;
+  }
   for (const c of caps) {
     html += `
       <section class="secao" aria-labelledby="t-${c}">
         <div class="secao-topo">
-          <h2 id="t-${c}">Salas para ${c} pessoas</h2>
+          <h3 id="t-${c}" class="subtitulo-grupo">Salas para ${c} pessoas</h3>
           <span class="nota">${perfilAtual() === 'externo' ? 'Não paroquiano: aprovação da secretaria' : 'Reserva confirmada na hora'}</span>
         </div>
         <div class="grade-salas">${comuns.filter((s) => s.capacidade === c).map(quadro).join('')}</div>

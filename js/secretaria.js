@@ -449,7 +449,7 @@ async function carregarSalas() {
   if (error) throw error;
   salas = data;
   preencherSelects();
-  const ativas = salas.filter((s) => s.ativa);
+  const ativas = salas.filter((s) => s.ativa && !s.excluida_em);
   const porCap = {};
   ativas.filter((s) => s.tipo === 'comum').forEach((s) => { porCap[s.capacidade] = (porCap[s.capacidade] || 0) + 1; });
   const partes = Object.entries(porCap).sort((a, b) => b[0] - a[0]).map(([c, n]) => `${n} para ${c} pessoas`);
@@ -457,7 +457,7 @@ async function carregarSalas() {
   if (pal) partes.push(pal === 1 ? '1 sala de palestra' : `${pal} salas de palestra`);
   $('salas-resumo').textContent = `${ativas.length} salas ativas · ${partes.join(' · ')}`;
 
-  $('salas-linhas').innerHTML = salas.map((s) => `
+  $('salas-linhas').innerHTML = salas.filter((s) => !s.excluida_em).map((s) => `
     <tr>
       <td><b>${esc(nomeSala(s))}</b>${s.nome ? ` <span class="nota">(nº ${esc(s.numero)})</span>` : ''}</td>
       <td>${s.capacidade} pessoas</td>
@@ -466,12 +466,41 @@ async function carregarSalas() {
       <td><span class="etq ${s.ativa ? 'etq-ok' : 'etq-bloq'}">${s.ativa ? 'Ativa' : 'Desativada'}</span></td>
       <td><span class="acoes-cel">
         <button type="button" class="btn btn-sec btn-peq" data-editar="${s.id}">Alterar</button>
-        <button type="button" class="btn ${s.ativa ? 'btn-perigo' : 'btn-sec'} btn-peq" data-ativar="${s.id}">${s.ativa ? 'Desativar' : 'Reativar'}</button>
+        <button type="button" class="btn btn-sec btn-peq" data-ativar="${s.id}">${s.ativa ? 'Desativar' : 'Reativar'}</button>
+        <button type="button" class="btn btn-perigo btn-peq" data-excluir-sala="${s.id}">Excluir</button>
       </span></td>
     </tr>`).join('');
 
   $('salas-linhas').querySelectorAll('[data-editar]').forEach((b) => b.addEventListener('click', () => editarSala(Number(b.dataset.editar))));
   $('salas-linhas').querySelectorAll('[data-ativar]').forEach((b) => b.addEventListener('click', () => alternarSala(Number(b.dataset.ativar))));
+  $('salas-linhas').querySelectorAll('[data-excluir-sala]').forEach((b) => b.addEventListener('click', () => excluirSala(Number(b.dataset.excluirSala))));
+}
+
+async function excluirSala(id) {
+  const s = salaPorId(id);
+  const nome = nomeSala(s);
+  if (!confirm(`Excluir ${nome}?\n\nA sala sai do site e da gestão. As reservas antigas continuam no histórico. As reservas futuras desta sala serão CANCELADAS.\n\nEsta ação não pode ser desfeita.`)) return;
+  const { data, error } = await sb.rpc('excluir_sala', { p_id: id });
+  if (error) return aviso('erro', limparErro(error));
+  const lista = data || [];
+  if (!lista.length) {
+    aviso('ok', `${nome} excluída. Não havia reservas futuras.`);
+  } else {
+    const porCodigo = new Map();
+    lista.forEach((r) => {
+      const p = porCodigo.get(r.codigo) || { ...r, itens: [] };
+      p.itens.push(`${dataCurta(r.data)} ${r.turno}`);
+      porCodigo.set(r.codigo, p);
+    });
+    const avisos = [...porCodigo.values()].map((p) => {
+      const texto = `Olá, ${primeiroNome(p.responsavel_nome)}! A reserva ${p.codigo} (${nome}, ${p.itens.join(', ')}) foi CANCELADA porque a sala não está mais disponível. Por favor, faça uma nova reserva em outra sala ou fale com a secretaria da Paróquia São José.`;
+      return `<br>• ${esc(p.codigo)} · ${esc(p.grupo)} · ${esc(p.itens.join(', '))} — <a href="${linkWhatsApp(p.responsavel_telefone, texto)}" target="_blank" rel="noopener">Avisar no WhatsApp</a>`;
+    }).join('');
+    aviso('ok', `${nome} excluída. ${porCodigo.size === 1 ? '1 reserva futura foi cancelada' : `${porCodigo.size} reservas futuras foram canceladas`}:`, avisos);
+  }
+  if ($('f-sala').elements.sala_id.value === String(id)) $('f-sala').reset();
+  carregarSalas();
+  atualizarContador();
 }
 
 function editarSala(id) {

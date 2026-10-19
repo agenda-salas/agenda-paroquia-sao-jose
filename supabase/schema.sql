@@ -101,7 +101,7 @@ create table if not exists turnos (
 insert into turnos (codigo, nome, inicio, fim, dias_semana, ordem) values
   ('M', 'Manhã', '08:30', '12:00', '{0,1,2,3,4,5,6}', 1),
   ('V', 'Tarde', '14:00', '18:00', '{0,1,2,3,4,5,6}', 2),
-  ('N', 'Noite', '19:00', '22:00', '{0,1,2,3,4,6}',   3)
+  ('N', 'Noite', '19:00', '22:00', '{0,1,2,3,4,5,6}', 3)
 on conflict (codigo) do nothing;
 
 -- ---------------------------------------------------------------------
