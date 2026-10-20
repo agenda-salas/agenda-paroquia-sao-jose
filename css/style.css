@@ -384,3 +384,18 @@ h1, h2 { color: var(--texto); }
 .topo-gestao { border-bottom: 4px solid var(--dourado); }
 .topo-gestao .marca-titulo { font-size: 28px; font-weight: 800; color: var(--azul); }
 @media (max-width: 640px) { .topo-gestao .marca-titulo { font-size: 21px; } }
+
+/* Gestão > Salas: botões lado a lado, fundo branco que ganha cor ao passar o mouse */
+.tabela-salas td:last-child { white-space: nowrap; }
+.tabela-salas .acoes-cel { flex-wrap: nowrap; }
+.tabela-salas .acoes-cel .btn { background: var(--branco); color: var(--azul); border: 1.5px solid var(--azul); white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.tabela-salas .acoes-cel .btn:hover, .tabela-salas .acoes-cel .btn:focus-visible { background: var(--azul); color: var(--branco); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(47,74,46,.25); }
+.tabela-salas .acoes-cel .btn-perigo { color: var(--perigo); border-color: var(--perigo); }
+.tabela-salas .acoes-cel .btn-perigo:hover, .tabela-salas .acoes-cel .btn-perigo:focus-visible { background: var(--perigo); color: var(--branco); box-shadow: 0 4px 10px rgba(180,35,24,.25); }
+.tabela-salas tbody tr { transition: background-color .15s ease; }
+.tabela-salas tbody tr:hover { background: var(--azul-claro); }
+@media (prefers-reduced-motion: reduce) { .tabela-salas .acoes-cel .btn { transition: none; } .tabela-salas .acoes-cel .btn:hover { transform: none; } }
+.tabela-salas th, .tabela-salas td { padding-left: 8px; padding-right: 8px; }
+.tabela-salas .acoes-cel { gap: 5px; }
+.tabela-salas .acoes-cel .btn { padding: 6px 9px; font-size: 12.5px; min-height: 34px; }
