@@ -719,8 +719,22 @@ function ligarConfig() {
   });
 }
 
+// No celular as tabelas viram cartões: cada célula recebe o nome da coluna
+function rotularTabelas() {
+  document.querySelectorAll('table.tabela-cartoes').forEach((tab) => {
+    const nomes = [...tab.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    const corpo = tab.querySelector('tbody');
+    const rotular = () => corpo.querySelectorAll('tr').forEach((tr) => [...tr.children].forEach((td, i) => {
+      if (!td.hasAttribute('colspan') && nomes[i] && nomes[i] !== 'Ações') td.dataset.rotulo = nomes[i];
+    }));
+    new MutationObserver(rotular).observe(corpo, { childList: true });
+    rotular();
+  });
+}
+
 // ---------------------------------------------------------------- início
 async function iniciar() {
+  rotularTabelas();
   sb.auth.onAuthStateChange((evento) => {
     if (evento === 'PASSWORD_RECOVERY') {
       recuperandoSenha = true;

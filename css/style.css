@@ -435,3 +435,39 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
 /* Direcionamento Espiritual (gestão): horários mais limpos */
 .slot-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .slot-acoes { flex-wrap: nowrap; }
+
+/* ---------- Celular: calendário da sala e tabelas da gestão ---------- */
+.so-cel { display: none !important; }
+.ponto, .legenda i.ponto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.ponto-L { background: var(--azul); }
+.ponto-P { background: #C8961A; }
+.ponto-R { background: #B4BAC6; }
+@media (max-width: 640px) {
+  .so-pc { display: none !important; }
+  .so-cel { display: inline-flex !important; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-left: 0 !important; }
+  .so-cel span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .cal-nav { flex-wrap: wrap; justify-content: center; }
+  .cal-nav h2 { min-width: 0; font-size: 18px; }
+  #mes-hoje { flex-basis: 100%; }
+  .chips { justify-content: center; gap: 4px; }
+  .chip { flex: 0 0 8px; height: 8px; padding: 0; font-size: 0; border-radius: 50%; border: 0; text-decoration: none; }
+  .chip-L { background: var(--azul); }
+  .chip-P { background: #C8961A; }
+  .chip-R { background: #B4BAC6; }
+  .chip-X { background: transparent; box-shadow: inset 0 0 0 1px #D5D9E1; }
+
+  .tabela-caixa:has(> table.tabela-cartoes) { overflow: visible; background: transparent; border: 0; padding: 0 !important; }
+  table.tabela-cartoes { min-width: 0; display: block; }
+  table.tabela-cartoes thead { display: none; }
+  table.tabela-cartoes tbody { display: flex; flex-direction: column; gap: 12px; }
+  table.tabela-cartoes tr { display: flex; flex-direction: column; gap: 6px; background: var(--branco); border: 1px solid var(--borda); border-top: 4px solid var(--dourado); border-radius: 14px; padding: 14px; }
+  table.tabela-cartoes tr:hover td, .tabela-salas tbody tr:hover { background: var(--branco); }
+  table.tabela-cartoes td { display: block; padding: 0; border: 0; white-space: normal !important; }
+  table.tabela-cartoes td[data-rotulo]::before { content: attr(data-rotulo); display: block; font-size: 11px; font-weight: 700; color: var(--texto-3); text-transform: uppercase; letter-spacing: .06em; }
+  table.tabela-cartoes td:first-child[data-rotulo]::before { display: none; }
+  table.tabela-cartoes td:first-child { font-size: 16px; }
+  table.tabela-cartoes td:last-child { padding-top: 8px; margin-top: 4px; border-top: 1px solid #EEF0F4; }
+  table.tabela-cartoes td[colspan] { border: 0; margin: 0; padding: 0; }
+  table.tabela-cartoes .acoes-cel { justify-content: flex-start; flex-wrap: wrap !important; gap: 8px; }
+  table.tabela-cartoes .acoes-cel .btn { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+}
