@@ -408,26 +408,26 @@ h1, h2 { color: var(--texto); }
 /* Área de Gestão: fundo em zinco claro */
 body.pagina-gestao { background: #E4E4E7; }
 
-/* Páginas de usuário: botões no mesmo padrão da Gestão > Salas
+/* Todos os botões (site e Área de Gestão): mesmo padrão da Gestão > Salas
    (fundo branco, borda colorida; ao passar o mouse, fundo verde ou vermelho) */
-body:not(.pagina-gestao) .btn,
-body:not(.pagina-gestao) .icone-btn,
-body:not(.pagina-gestao) .menu .btn-entrar {
+body .btn,
+body .icone-btn,
+body .menu .btn-entrar {
   background: var(--branco); color: var(--azul); border: 1.5px solid var(--azul);
   transition: background-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
-body:not(.pagina-gestao) .btn:hover:not(:disabled), body:not(.pagina-gestao) .btn:focus-visible,
-body:not(.pagina-gestao) .icone-btn:hover, body:not(.pagina-gestao) .icone-btn:focus-visible,
-body:not(.pagina-gestao) .menu .btn-entrar:hover {
+body .btn:hover:not(:disabled), body .btn:focus-visible,
+body .icone-btn:hover, body .icone-btn:focus-visible,
+body .menu .btn-entrar:hover {
   background: var(--azul); color: var(--branco); border-color: var(--azul);
   transform: translateY(-1px); box-shadow: 0 4px 10px rgba(47,74,46,.25);
 }
-body:not(.pagina-gestao) .btn-perigo { color: var(--perigo); border-color: var(--perigo); }
-body:not(.pagina-gestao) .btn-perigo:hover:not(:disabled), body:not(.pagina-gestao) .btn-perigo:focus-visible {
+body .btn-perigo { color: var(--perigo); border-color: var(--perigo); }
+body .btn-perigo:hover:not(:disabled), body .btn-perigo:focus-visible {
   background: var(--perigo); color: var(--branco); border-color: var(--perigo); box-shadow: 0 4px 10px rgba(161,38,38,.25);
 }
-body:not(.pagina-gestao) .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); }
+body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); }
 @media (prefers-reduced-motion: reduce) {
-  body:not(.pagina-gestao) .btn, body:not(.pagina-gestao) .icone-btn { transition: none; }
-  body:not(.pagina-gestao) .btn:hover, body:not(.pagina-gestao) .icone-btn:hover { transform: none; }
+  body .btn, body .icone-btn { transition: none; }
+  body .btn:hover, body .icone-btn:hover { transform: none; }
 }
