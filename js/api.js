@@ -128,7 +128,7 @@ export async function minhasReservas() {
   const { data: sessaoAtual } = await sb.auth.getSession();
   const uid = sessaoAtual.session?.user?.id;
   if (!uid) return [];
-  const campos = 'codigo, data, status, motivo_recusa, salas(numero, nome), turnos(codigo, nome, inicio, ordem), grupo';
+  const campos = 'codigo, sala_id, data, status, motivo_recusa, salas(numero, nome), turnos(codigo, nome, inicio, fim, ordem), grupo';
   const busca = (extra) => sb.from('reservas').select(campos + extra)
     .eq('solicitante_id', uid)
     .gte('data', somaDias(hojeISO(), -30))
@@ -148,6 +148,17 @@ export async function meusAtendimentos() {
 
 export async function cancelarMeuAtendimento(id) {
   const { error } = await sb.rpc('cancelar_meu_atendimento', { p_id: id });
+  if (error) throw new Error(limparErro(error));
+}
+
+// "Excluir" de um cartão encerrado (só tira da lista da pessoa)
+export async function ocultarMinhaReserva(codigo) {
+  const { error } = await sb.rpc('ocultar_minha_reserva', { p_codigo: codigo });
+  if (error) throw new Error(limparErro(error));
+}
+
+export async function ocultarMeuAtendimento(id) {
+  const { error } = await sb.rpc('ocultar_meu_atendimento', { p_id: id });
   if (error) throw new Error(limparErro(error));
 }
 

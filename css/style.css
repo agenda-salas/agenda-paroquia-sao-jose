@@ -399,3 +399,8 @@ h1, h2 { color: var(--texto); }
 .tabela-salas th, .tabela-salas td { padding-left: 8px; padding-right: 8px; }
 .tabela-salas .acoes-cel { gap: 5px; }
 .tabela-salas .acoes-cel .btn { padding: 6px 9px; font-size: 12.5px; min-height: 34px; }
+
+/* Minhas reservas: cartão com link + botões */
+.cartao-reserva { gap: 10px; }
+.cartao-link { display: flex; flex-direction: column; gap: 8px; color: inherit; text-decoration: none; }
+.cartao-acoes { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid var(--borda); margin-top: auto; }
