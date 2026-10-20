@@ -1,6 +1,6 @@
 // Service worker: guarda as telas para abrir sem internet.
 // Os dados da agenda ficam guardados pelo próprio app (última agenda baixada).
-const VERSAO = 'salas-sj-v19';
+const VERSAO = 'salas-sj-v20';
 const ARQUIVOS = [
   './', './index.html', './sala.html', './entrar.html', './reservar.html', './comprovante.html', './minhas-reservas.html',
   './secretaria.html', './atendimentos.html', './direcionamento.html', './css/style.css?v=16',
@@ -32,7 +32,8 @@ self.addEventListener('fetch', (e) => {
   // Páginas e arquivos do site: rede primeiro, cópia guardada se estiver sem internet
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(req).then((res) => {
+      // no-cache: sempre confirma com o servidor se há versão nova (evita misturar arquivos antigos e novos)
+      fetch(req, { cache: 'no-cache' }).then((res) => {
         if (res.ok) { const copia = res.clone(); caches.open(VERSAO).then((c) => c.put(req, copia)); }
         return res;
       }).catch(() => caches.match(req, { ignoreSearch: true }))
