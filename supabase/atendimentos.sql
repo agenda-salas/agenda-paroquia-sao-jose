@@ -288,6 +288,15 @@ as $$
   );
 $$;
 
+-- Área de atendimento da paróquia: endereços que começam com QND ou QNE
+-- (aceita "qnd 20", "QND20", "Q.N.D. 20", "QNE-12"...)
+create or replace function endereco_na_area(p_endereco text)
+returns boolean
+language sql immutable
+as $$
+  select upper(regexp_replace(coalesce(p_endereco, ''), '[^A-Za-z0-9]', '', 'g')) ~ '^(QND|QNE)';
+$$;
+
 -- Pedido feito pela própria pessoa (precisa estar logada)
 drop function if exists solicitar_atendimento(date, time, time, text, text, text, text, text, text, text);
 create function solicitar_atendimento(
@@ -318,12 +327,18 @@ begin
   if auth.uid() is null then
     raise exception 'Entre com sua conta para pedir um horário.';
   end if;
-  if p_tipo not in ('paroquiano','externo','enfermo') then
+  if p_tipo = 'externo' then
+    raise exception 'O Direcionamento Espiritual é exclusivo para paroquianos. Procure a paróquia e o pároco responsáveis pela região onde você mora.';
+  end if;
+  if p_tipo not in ('paroquiano','enfermo') then
     raise exception 'Escolha para quem é o atendimento.';
   end if;
   if v_nome = '' then raise exception 'Informe o nome.'; end if;
   if length(regexp_replace(v_fone, '\D', '', 'g')) < 10 then raise exception 'Informe o telefone com DDD.'; end if;
   if v_end is null then raise exception 'Informe o endereço.'; end if;
+  if not endereco_na_area(v_end) then
+    raise exception 'Este endereço não pertence à área de atendimento da Paróquia São José (QND e QNE). Procure a paróquia e o pároco responsáveis pela região onde você mora.';
+  end if;
   if p_tipo = 'externo' then
     if v_paroq is null then raise exception 'Informe a paróquia em que atua.'; end if;
     if v_paroco is null then raise exception 'Informe o nome do pároco responsável.'; end if;

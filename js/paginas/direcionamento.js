@@ -1,7 +1,7 @@
 // Direcionamento Espiritual: a pessoa vê os horários livres e pede um horário.
 // O pedido fica aguardando a confirmação da secretaria ou do Pároco.
 import { sb, limparErro } from '../api.js';
-import { montarPagina, sessao, perfilAtual } from '../ui.js';
+import { montarPagina, sessao } from '../ui.js';
 import {
   esc, hojeISO, somaDias, diaSemana, dataLonga, dataCurta, hora, agoraSP,
   mascaraTelefone, soDigitos, DIAS_LONGOS,
@@ -9,6 +9,9 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const DIAS = 14;
+// Área de atendimento da paróquia: endereços que começam com QND ou QNE
+const MSG_AREA = 'Este endereço não pertence à área de atendimento da Paróquia São José (QND e QNE). Procure a paróquia e o pároco responsáveis pela região onde você mora.';
+const enderecoNaArea = (t) => /^(QND|QNE)/.test(String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
 const PUBLICO = { paroquianos: 'Paroquianos', enfermos: 'Enfermos' };
 const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'Enfermo' };
 
@@ -119,8 +122,8 @@ function abrirPedido(slot) {
 
   const opcoes = slot.publico === 'enfermos'
     ? [['enfermo', 'Enfermo (o Pároco vai até o endereço)']]
-    : [['paroquiano', 'Paroquiano'], ['externo', 'Não paroquiano']];
-  const marcado = slot.publico === 'enfermos' ? 'enfermo' : (perfilAtual() === 'externo' ? 'externo' : 'paroquiano');
+    : [['paroquiano', 'Paroquiano']];
+  const marcado = slot.publico === 'enfermos' ? 'enfermo' : 'paroquiano';
   $('pd-tipos').innerHTML = '<legend class="campo"><span>Para quem é o atendimento <span class="obrig" aria-hidden="true">*</span></span></legend>'
     + opcoes.map(([v, t]) => `<label class="marcar"><input type="radio" name="tipo" value="${v}" ${v === marcado ? 'checked' : ''}>${esc(t)}</label>`).join('');
   $('pd-tipos').querySelectorAll('input').forEach((r) => r.addEventListener('change', ajustar));
@@ -156,6 +159,7 @@ function ligarPedido() {
     if (!f.nome.value.trim()) return erro('Informe o nome.');
     if (soDigitos(f.telefone.value).length < 10) return erro('Informe o telefone com DDD.');
     if (!f.endereco.value.trim()) return erro('Informe o endereço.');
+    if (!enderecoNaArea(f.endereco.value)) return erro(MSG_AREA);
     if (tipo === 'externo' && !f.paroquia.value.trim()) return erro('Informe a paróquia em que atua.');
     if (tipo === 'externo' && !f.paroco.value.trim()) return erro('Informe o nome do pároco responsável.');
     const bt = $('pd-enviar');
