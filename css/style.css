@@ -431,3 +431,7 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
   body .btn, body .icone-btn { transition: none; }
   body .btn:hover, body .icone-btn:hover { transform: none; }
 }
+
+/* Direcionamento Espiritual (gestão): horários mais limpos */
+.slot-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.slot-acoes { flex-wrap: nowrap; }

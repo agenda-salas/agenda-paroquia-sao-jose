@@ -15,6 +15,7 @@ let ehSecretaria = false;
 let inicioSemana = segundaDe(hojeISO());
 let horarios = [];
 let atendimentos = [];
+let pendentes = [];        // pedidos aguardando confirmação (todas as datas futuras)
 let bloqueios = [];
 let slotAtual = null;
 
@@ -97,15 +98,51 @@ async function carregarHorarios() {
 async function carregarSemana() {
   const ini = inicioSemana;
   const fim = somaDias(ini, 6);
-  const [{ data: a, error: e1 }, { data: b, error: e2 }] = await Promise.all([
+  const [{ data: a, error: e1 }, { data: b, error: e2 }, { data: p, error: e3 }] = await Promise.all([
     sb.from('atendimentos').select('*').gte('data', ini).lte('data', fim)
       .in('status', ['agendado', 'pendente', 'solicitado', 'realizado']).order('data').order('inicio'),
     sb.from('atend_bloqueios').select('*').lte('data_inicio', fim).gte('data_fim', ini),
+    sb.from('atendimentos').select('*').gte('data', hojeISO())
+      .in('status', ['pendente', 'solicitado']).order('data').order('inicio'),
   ]);
-  if (e1 || e2) { aviso('erro', limparErro(e1 || e2)); return; }
+  if (e1 || e2 || e3) { aviso('erro', limparErro(e1 || e2 || e3)); return; }
   atendimentos = a;
   bloqueios = b;
+  pendentes = p || [];
+  desenharPendentes();
   desenhar();
+}
+
+// ---------------------------------------------------------------- pedidos aguardando (cartões, como na aba Aprovações)
+function desenharPendentes() {
+  const n = pendentes.length;
+  $('pend-resumo').textContent = n ? `${n} ${n === 1 ? 'pedido aguardando' : 'pedidos aguardando'}` : '';
+  if (!n) { $('pend').innerHTML = '<div class="vazio">Nenhum pedido aguardando confirmação.</div>'; return; }
+  $('pend').innerHTML = `<div class="grade-salas" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${pendentes.map((a) => {
+    const pend = a.status === 'pendente';
+    return `
+      <article class="cartao" style="display:flex;flex-direction:column;gap:8px;border-top:4px solid var(--dourado)">
+        <div class="sala-topo">
+          <span class="sala-nome">Direcionamento Espiritual</span>
+          <span class="etq ${a.tipo === 'enfermo' || a.tipo === 'externo' ? 'etq-externo' : 'etq-azul'}">${TIPO[a.tipo]}</span>
+        </div>
+        <b>${esc(dataLonga(a.data))} · ${esc(hora(hm(a.inicio) + ':00'))}</b>
+        <span><b>${esc(a.nome)}</b></span>
+        <span class="nota"><a href="${linkWhatsApp(a.telefone, '')}" target="_blank" rel="noopener">${esc(a.telefone)}</a></span>
+        ${a.local_atendimento ? `<span class="nota"><b>Local:</b> ${esc(a.local_atendimento)}</span>` : ''}
+        ${a.endereco ? `<span class="nota"><b>${a.tipo === 'enfermo' ? 'Residência' : 'Endereço'}:</b> ${esc(a.endereco)}</span>` : ''}
+        ${a.tipo === 'externo' ? `<span class="nota">${esc(a.paroquia_origem || '')} · ${esc(a.paroco_responsavel || '')}</span>` : ''}
+        ${a.assunto ? `<span class="nota">${a.tipo === 'enfermo' ? 'Observações' : 'Assunto'}: ${esc(a.assunto)}</span>` : ''}
+        ${a.criado_em ? `<span class="nota" style="font-size:12px">Pedido em ${new Date(a.criado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>` : ''}
+        ${pend && !ehSecretaria ? '<span class="etq etq-pend" style="align-self:flex-start">Aguardando a secretaria</span>' : ''}
+        <div class="acoes">
+          ${pend ? (ehSecretaria ? `<button type="button" class="btn" data-acao="liberar" data-id="${a.id}">Liberar</button>` : '')
+            : `<button type="button" class="btn" data-acao="confirmar" data-id="${a.id}">Confirmar</button>`}
+          <button type="button" class="btn btn-perigo" data-acao="recusar" data-id="${a.id}">Recusar</button>
+        </div>
+      </article>`;
+  }).join('')}</div>`;
+  $('pend').querySelectorAll('[data-acao]').forEach((b) => b.addEventListener('click', () => acao(b.dataset.acao, b.dataset)));
 }
 
 // ---------------------------------------------------------------- agenda
@@ -156,6 +193,17 @@ function slotHtml(s) {
   const ds = `data-data="${s.data}" data-inicio="${s.inicio}" data-fim="${s.fim}" data-publico="${s.publico}"`;
   const velho = passou(s.data, s.fim);
 
+  if (a && (a.status === 'pendente' || a.status === 'solicitado')) {
+    return `
+      <li class="slot slot-pend">
+        <span class="slot-hora">${faixa}</span>
+        <div class="slot-corpo">
+          <span><b>${esc(a.nome)}</b> · ${esc(TIPO[a.tipo])}</span>
+          <span class="nota">Aguardando confirmação · ver pedidos acima</span>
+        </div>
+      </li>`;
+  }
+
   if (a) {
     const pend = a.status === 'pendente';
     const solic = a.status === 'solicitado';
@@ -165,11 +213,8 @@ function slotHtml(s) {
       <li class="slot ${pend || solic ? 'slot-pend' : 'slot-ocupado'}">
         <span class="slot-hora">${faixa}</span>
         <div class="slot-corpo">
-          <b>${esc(a.nome)}</b>
-          <span class="acoes" style="gap:6px">
+          <span class="slot-titulo"><b>${esc(a.nome)}</b>
             <span class="etq ${a.tipo === 'externo' ? 'etq-externo' : a.tipo === 'enfermo' ? 'etq-externo' : 'etq-azul'}">${TIPO[a.tipo]}</span>
-            ${pend ? '<span class="etq etq-pend">Aguardando a secretaria</span>' : ''}
-            ${solic ? '<span class="etq etq-pend">Pedido pelo site · confirmar</span>' : ''}
             ${a.status === 'realizado' ? '<span class="etq etq-ok">Realizado</span>' : ''}
           </span>
           ${extra}
@@ -219,7 +264,7 @@ function slotHtml(s) {
 }
 
 async function acao(tipo, d) {
-  const a = d.id ? atendimentos.find((x) => String(x.id) === d.id) : null;
+  const a = d.id ? [...atendimentos, ...pendentes].find((x) => String(x.id) === d.id) : null;
   if (tipo === 'agendar') return abrirAgendar({ data: d.data, inicio: d.inicio, fim: d.fim, publico: d.publico });
   if (tipo === 'bloquear-slot') return abrirBloquear({ de: d.data, ate: d.data, inicio: d.inicio, fim: d.fim });
 
