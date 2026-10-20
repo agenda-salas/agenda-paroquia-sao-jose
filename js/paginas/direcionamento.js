@@ -139,12 +139,14 @@ function ajustar() {
   $('pd-externo').hidden = !externo;
   f.paroquia.required = externo;
   f.paroco.required = externo;
-  $('pd-rotulo-end').textContent = enfermo ? 'Endereço do enfermo' : 'Endereço';
+  $('pd-rotulo-end').textContent = enfermo ? 'Endereço residencial do enfermo' : 'Endereço';
+  $('pd-campo-local').hidden = !enfermo;
+  f.local.required = enfermo;
   $('pd-rotulo-assunto').textContent = enfermo ? 'Observações (estado do enfermo, ponto de referência)' : 'Assunto (opcional)';
   $('pd-regra').textContent = externo
     ? 'Não paroquiano: o pedido será confirmado pela secretaria em no máximo 48 horas.'
     : enfermo
-      ? 'O Pároco vai até o endereço informado. O pedido será confirmado pela secretaria ou pelo Pároco.'
+      ? 'O Pároco vai até o local informado. O pedido será confirmado pela secretaria ou pelo Pároco.'
       : 'O pedido será confirmado pela secretaria ou pelo Pároco. Você recebe o aviso pelo WhatsApp.';
 }
 
@@ -160,6 +162,7 @@ function ligarPedido() {
     if (soDigitos(f.telefone.value).length < 10) return erro('Informe o telefone com DDD.');
     if (!f.endereco.value.trim()) return erro('Informe o endereço.');
     if (!enderecoNaArea(f.endereco.value)) return erro(MSG_AREA);
+    if (tipo === 'enfermo' && !f.local.value.trim()) return erro('Informe o local onde o enfermo se encontra.');
     if (tipo === 'externo' && !f.paroquia.value.trim()) return erro('Informe a paróquia em que atua.');
     if (tipo === 'externo' && !f.paroco.value.trim()) return erro('Informe o nome do pároco responsável.');
     const bt = $('pd-enviar');
@@ -170,6 +173,7 @@ function ligarPedido() {
       p_nome: f.nome.value.trim(), p_telefone: f.telefone.value.trim(), p_tipo: tipo,
       p_assunto: f.assunto.value.trim() || null, p_endereco: f.endereco.value.trim(),
       p_paroquia: f.paroquia.value.trim() || null, p_paroco: f.paroco.value.trim() || null,
+      p_local: tipo === 'enfermo' ? f.local.value.trim() : null,
     });
     bt.disabled = false;
     bt.textContent = 'Enviar pedido';

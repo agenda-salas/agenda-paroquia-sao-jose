@@ -79,6 +79,9 @@ create table if not exists atendimentos (
   check (fim > inicio)
 );
 
+-- Local onde o enfermo se encontra (casa, hospital...), obrigatório para enfermos
+alter table atendimentos add column if not exists local_atendimento text;
+
 -- Um horário só tem um atendimento ativo
 -- (banco já existente: aceita o novo status 'solicitado')
 alter table atendimentos drop constraint if exists atendimentos_status_check;
@@ -108,6 +111,7 @@ create table if not exists atend_bloqueios (
 -- Agendar (secretaria ou Pároco)
 -- ---------------------------------------------------------------------
 drop function if exists agendar_atendimento(date, time, time, text, text, text, text, text, text, text);
+drop function if exists agendar_atendimento(date, time, time, text, text, text, text, text, text, text, text);
 create function agendar_atendimento(
   p_data      date,
   p_inicio    time,
@@ -118,7 +122,8 @@ create function agendar_atendimento(
   p_assunto   text,
   p_endereco  text,
   p_paroquia  text,
-  p_paroco    text
+  p_paroco    text,
+  p_local     text default null
 )
 returns bigint
 language plpgsql security definer set search_path = public
@@ -129,6 +134,7 @@ declare
   v_end    text := nullif(trim(coalesce(p_endereco, '')), '');
   v_paroq  text := nullif(trim(coalesce(p_paroquia, '')), '');
   v_paroco text := nullif(trim(coalesce(p_paroco, '')), '');
+  v_local  text := nullif(trim(coalesce(p_local, '')), '');
   v_pub    text;
   v_status text;
   v_id     bigint;
@@ -148,6 +154,9 @@ begin
   end if;
   if p_tipo = 'enfermo' and v_end is null then
     raise exception 'Informe o endereço do enfermo.';
+  end if;
+  if p_tipo = 'enfermo' and v_local is null then
+    raise exception 'Informe o local onde o enfermo se encontra.';
   end if;
 
   -- O horário precisa estar na grade, e o público precisa combinar
@@ -178,9 +187,10 @@ begin
   v_status := case when p_tipo = 'externo' and not is_admin() then 'pendente' else 'agendado' end;
 
   begin
-    insert into atendimentos (data, inicio, fim, nome, telefone, tipo, assunto, endereco, paroquia_origem,
+    insert into atendimentos (data, inicio, fim, nome, telefone, tipo, assunto, endereco, local_atendimento, paroquia_origem,
                               paroco_responsavel, status, criado_por, liberado_por, liberado_em)
     values (p_data, p_inicio, p_fim, v_nome, v_fone, p_tipo, nullif(trim(coalesce(p_assunto, '')), ''), v_end,
+            case when p_tipo = 'enfermo' then v_local end,
             case when p_tipo = 'externo' then v_paroq end,
             case when p_tipo = 'externo' then v_paroco end,
             v_status, auth.uid(),
@@ -255,11 +265,11 @@ create policy atend_bloq_gestao on atend_bloqueios for all using (pode_atender()
 grant select on parocos to authenticated;
 grant select, insert, update, delete on atend_horarios, atendimentos, atend_bloqueios to authenticated;
 
-revoke execute on function agendar_atendimento(date, time, time, text, text, text, text, text, text, text) from public, anon;
+revoke execute on function agendar_atendimento(date, time, time, text, text, text, text, text, text, text, text) from public, anon;
 revoke execute on function liberar_atendimento(bigint) from public, anon;
 grant execute on function is_paroco()    to anon, authenticated;
 grant execute on function pode_atender() to anon, authenticated;
-grant execute on function agendar_atendimento(date, time, time, text, text, text, text, text, text, text) to authenticated;
+grant execute on function agendar_atendimento(date, time, time, text, text, text, text, text, text, text, text) to authenticated;
 grant execute on function liberar_atendimento(bigint) to authenticated;
 
 
@@ -299,6 +309,7 @@ $$;
 
 -- Pedido feito pela própria pessoa (precisa estar logada)
 drop function if exists solicitar_atendimento(date, time, time, text, text, text, text, text, text, text);
+drop function if exists solicitar_atendimento(date, time, time, text, text, text, text, text, text, text, text);
 create function solicitar_atendimento(
   p_data      date,
   p_inicio    time,
@@ -309,7 +320,8 @@ create function solicitar_atendimento(
   p_assunto   text,
   p_endereco  text,
   p_paroquia  text,
-  p_paroco    text
+  p_paroco    text,
+  p_local     text default null
 )
 returns bigint
 language plpgsql security definer set search_path = public
@@ -321,6 +333,7 @@ declare
   v_end    text := nullif(trim(coalesce(p_endereco, '')), '');
   v_paroq  text := nullif(trim(coalesce(p_paroquia, '')), '');
   v_paroco text := nullif(trim(coalesce(p_paroco, '')), '');
+  v_local  text := nullif(trim(coalesce(p_local, '')), '');
   v_pub    text;
   v_id     bigint;
 begin
@@ -336,6 +349,7 @@ begin
   if v_nome = '' then raise exception 'Informe o nome.'; end if;
   if length(regexp_replace(v_fone, '\D', '', 'g')) < 10 then raise exception 'Informe o telefone com DDD.'; end if;
   if v_end is null then raise exception 'Informe o endereço.'; end if;
+  if p_tipo = 'enfermo' and v_local is null then raise exception 'Informe o local onde o enfermo se encontra.'; end if;
   if not endereco_na_area(v_end) then
     raise exception 'Este endereço não pertence à área de atendimento da Paróquia São José (QND e QNE). Procure a paróquia e o pároco responsáveis pela região onde você mora.';
   end if;
@@ -382,9 +396,10 @@ begin
   end if;
 
   begin
-    insert into atendimentos (data, inicio, fim, nome, telefone, tipo, assunto, endereco,
+    insert into atendimentos (data, inicio, fim, nome, telefone, tipo, assunto, endereco, local_atendimento,
                               paroquia_origem, paroco_responsavel, status, criado_por)
     values (p_data, p_inicio, p_fim, v_nome, v_fone, p_tipo, nullif(trim(coalesce(p_assunto, '')), ''), v_end,
+            case when p_tipo = 'enfermo' then v_local end,
             case when p_tipo = 'externo' then v_paroq end,
             case when p_tipo = 'externo' then v_paroco end,
             case when p_tipo = 'externo' then 'pendente' else 'solicitado' end,
@@ -427,10 +442,10 @@ begin
 end;
 $$;
 
-revoke execute on function solicitar_atendimento(date, time, time, text, text, text, text, text, text, text) from public, anon;
+revoke execute on function solicitar_atendimento(date, time, time, text, text, text, text, text, text, text, text) from public, anon;
 revoke execute on function meus_atendimentos() from public, anon;
 revoke execute on function cancelar_meu_atendimento(bigint) from public, anon;
 grant execute on function atend_agenda_publica(date, date) to anon, authenticated;
-grant execute on function solicitar_atendimento(date, time, time, text, text, text, text, text, text, text) to authenticated;
+grant execute on function solicitar_atendimento(date, time, time, text, text, text, text, text, text, text, text) to authenticated;
 grant execute on function meus_atendimentos() to authenticated;
 grant execute on function cancelar_meu_atendimento(bigint) to authenticated;

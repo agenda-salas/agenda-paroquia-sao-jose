@@ -77,7 +77,7 @@ function textoAgendado(a) {
       + `Ele aguarda a confirmação ${a.status === 'pendente' ? 'da secretaria' : 'da secretaria ou do Pároco'}. Avisaremos assim que for confirmado.`;
   }
   if (a.tipo === 'enfermo') {
-    return `Olá, ${primeiroNome(a.nome)}! O atendimento do Pároco da Paróquia São José ao enfermo está agendado para ${quando}, no endereço: ${a.endereco}.`;
+    return `Olá, ${primeiroNome(a.nome)}! O atendimento do Pároco da Paróquia São José ao enfermo está agendado para ${quando}, no local: ${a.local_atendimento || a.endereco}.`;
   }
   return `Olá, ${primeiroNome(a.nome)}! Seu Direcionamento Espiritual com o Pároco da Paróquia São José está agendado para ${quando}. `
     + 'Em caso de imprevisto, avise a secretaria.';
@@ -173,7 +173,8 @@ function slotHtml(s) {
             ${a.status === 'realizado' ? '<span class="etq etq-ok">Realizado</span>' : ''}
           </span>
           ${extra}
-          ${a.endereco ? `<span class="nota">${esc(a.endereco)}</span>` : ''}
+          ${a.local_atendimento ? `<span class="nota"><b>Local:</b> ${esc(a.local_atendimento)}</span>` : ''}
+          ${a.endereco ? `<span class="nota">${a.tipo === 'enfermo' ? '<b>Residência:</b> ' : ''}${esc(a.endereco)}</span>` : ''}
           ${a.assunto ? `<span class="nota">${esc(a.assunto)}</span>` : ''}
           <a href="${linkWhatsApp(a.telefone, '')}" target="_blank" rel="noopener" class="nota">${esc(a.telefone)}</a>
           <span class="acoes slot-acoes">
@@ -299,13 +300,16 @@ function ajustarCampos() {
   const enfermo = tipo === 'enfermo';
   $('ag-externo').hidden = !externo;
   $('ag-campo-endereco').hidden = !(externo || enfermo);
+  $('ag-rotulo-end').textContent = enfermo ? 'Endereço residencial do enfermo' : 'Endereço';
+  $('ag-campo-local').hidden = !enfermo;
+  f.local.required = enfermo;
   f.endereco.required = externo || enfermo;
   f.paroquia.required = externo;
   f.paroco.required = externo;
   $('ag-rotulo-assunto').textContent = enfermo ? 'Observações (estado do enfermo, ponto de referência)' : 'Assunto (opcional)';
   const regra = externo && !ehSecretaria
     ? 'Pessoa de outra paróquia: o horário fica reservado, aguardando a liberação da secretaria.'
-    : enfermo ? 'Atendimento a enfermo: o Pároco vai até o endereço informado.' : '';
+    : enfermo ? 'Atendimento a enfermo: o Pároco vai até o local informado.' : '';
   $('ag-regra').textContent = regra;
   $('ag-regra').hidden = !regra;
 }
@@ -319,6 +323,7 @@ function ligarAgendar() {
     if (!f.nome.value.trim()) return erroEm('ag-erro', 'Informe o nome.');
     if (soDigitos(f.telefone.value).length < 10) return erroEm('ag-erro', 'Informe o telefone com DDD.');
     if ((tipo === 'externo' || tipo === 'enfermo') && !f.endereco.value.trim()) return erroEm('ag-erro', 'Informe o endereço.');
+    if (tipo === 'enfermo' && !f.local.value.trim()) return erroEm('ag-erro', 'Informe o local onde o enfermo se encontra.');
     if (tipo === 'externo' && !f.paroquia.value.trim()) return erroEm('ag-erro', 'Informe a paróquia em que atua.');
     if (tipo === 'externo' && !f.paroco.value.trim()) return erroEm('ag-erro', 'Informe o nome do pároco responsável.');
     const bt = $('ag-salvar');
@@ -328,6 +333,7 @@ function ligarAgendar() {
       p_nome: f.nome.value.trim(), p_telefone: f.telefone.value.trim(), p_tipo: tipo,
       p_assunto: f.assunto.value.trim() || null, p_endereco: f.endereco.value.trim() || null,
       p_paroquia: f.paroquia.value.trim() || null, p_paroco: f.paroco.value.trim() || null,
+      p_local: tipo === 'enfermo' ? f.local.value.trim() : null,
     });
     bt.disabled = false;
     if (error) return erroEm('ag-erro', limparErro(error));
