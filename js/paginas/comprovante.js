@@ -49,8 +49,14 @@ async function iniciar() {
   let nota = '';
   if (r.status === 'pendente') nota = 'A secretaria vai analisar o pedido. Guarde este link: quando a reserva for aprovada, esta página mostrará o comprovante confirmado.';
   if (r.status === 'recusada') nota = `Motivo: ${esc(r.motivo_recusa || 'não informado')}.`;
-  if (r.status === 'expirada') nota = 'O pedido não foi aprovado dentro do prazo e o turno foi liberado.';
-  if (r.status === 'cancelada') nota = 'Este comprovante não vale mais.';
+
+  // Reserva que não será usada: troca as orientações de uso por uma mensagem de encerramento
+  const FINAL = {
+    recusada: 'Pedimos desculpas, mas não foi possível confirmar sua reserva pelo motivo acima. Solicite um novo agendamento em outra data. Agradecemos a compreensão.',
+    cancelada: 'Esta reserva foi cancelada e não é mais válida. Se ainda precisar do espaço, faça uma nova reserva. Agradecemos.',
+    expirada: 'O pedido não foi analisado dentro do prazo e o horário foi liberado. Se ainda precisar do espaço, faça uma nova reserva ou fale com a secretaria paroquial. Agradecemos a compreensão.',
+  };
+  const semUso = !!FINAL[r.status];
 
 
   el.innerHTML = `
@@ -75,13 +81,13 @@ async function iniciar() {
         <dt>Responsável</dt><dd>${esc(r.responsavel)}</dd>
         ${r.motivo ? `<dt>Motivo</dt><dd style="font-weight:600">${esc(r.motivo)}</dd>` : ''}
       </dl>
-      ${(r.itens || []).length ? `
+      ${!semUso && (r.itens || []).length ? `
       <div class="comp-itens">
         <p>${esc(TEXTO_ITENS)}</p>
         <ul>${r.itens.map((i) => `<li><span>${esc(i.descricao)}</span>${i.quantidade ? `<b>${esc(i.quantidade)}</b>` : ''}</li>`).join('')}</ul>
       </div>` : ''}
       ${nota ? `<div class="comp-regras" style="background:${st.fundo};color:${st.cor};font-weight:600">${nota}</div>` : ''}
-      <div class="comp-regras">${esc(r.regras || '')}</div>
+      <div class="comp-regras">${esc(semUso ? FINAL[r.status] : (r.regras || ''))}</div>
     </section>
 
     ${podeCompartilhar ? `
