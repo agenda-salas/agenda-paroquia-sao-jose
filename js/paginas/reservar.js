@@ -12,6 +12,7 @@ let sala, cfg = {}, enviando = false;
 const alterando = (param('alterar') || '').toUpperCase();   // código da reserva que está sendo alterada
 let antigas = [];                                             // turnos ativos da reserva antiga
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
+const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes do horário agendado, faça contato com a secretaria paroquial em horário comercial.';
 
 // Mostra ou esconde os campos de quem é de outra paróquia
 function aplicarPerfil() {
@@ -171,8 +172,7 @@ function regra() {
       + (aprovacao ? `A nova reserva passa de novo pela aprovação da secretaria (até ${cfg.prazo_aprovacao_horas || 48} horas).` : 'A nova reserva é confirmada na hora.')
       + ' Se o novo horário não estiver disponível, nada muda.';
   } else if (sessao.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
-  else if (perfilAtual() === 'externo') texto = `Sua reserva será confirmada pela secretaria em no máximo ${cfg.prazo_aprovacao_horas || 48} horas.`;
-  else if (sala?.controlada) texto = `Sala com aprovação da secretaria: sua reserva fica pendente por até ${cfg.prazo_aprovacao_horas || 48} h, até a secretaria aprovar.`;
+  else if (perfilAtual() === 'externo' || sala?.controlada) texto = TEXTO_APROVACAO;
   else texto = 'Sala comum: a reserva é confirmada na hora. Alterações e cancelamentos até o início do turno.';
   $('regra').innerHTML = `<span>${esc(texto)}</span>`;
 }
