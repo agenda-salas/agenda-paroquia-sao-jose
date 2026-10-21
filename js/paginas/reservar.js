@@ -1,5 +1,5 @@
 // Formulário de reserva: nome, telefone e grupo informados a cada reserva
-import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, nomesPastorais, criarReserva, nomeSala, dadosDaMinhaReserva, alterarMinhaReserva } from '../api.js';
+import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, nomesPastorais, criarReserva, solicitarReservaExterna, nomeSala, dadosDaMinhaReserva, alterarMinhaReserva } from '../api.js';
 import { montarPagina, exigirLogin, mostrarAviso, sessao, escolherPerfil, faixaPerfil, perfilAtual } from '../ui.js';
 import { param, dataLonga, faixa, esc, mascaraTelefone, soDigitos } from '../util.js';
 import { indexarAgenda, situacaoTurno, turnoReservavel } from '../calendario.js';
@@ -15,17 +15,24 @@ let antigas = [];                                             // turnos ativos d
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
 const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes do horário agendado, faça contato com a secretaria paroquial em horário comercial.';
 
+// Conta de pastoral: o grupo é sempre o nome da pastoral (não muda)
+const grupoFixo = () => (sessao && !sessao.admin && sessao.pastoral) || null;
+const ehExterno = () => !grupoFixo() && perfilAtual() === 'externo';
+
 // Mostra ou esconde os campos de quem é de outra paróquia
 function aplicarPerfil() {
   if (alterando) { regra(); return; }
   const f = $('form');
-  const externo = perfilAtual() === 'externo';
-  // Paroquiano escolhe na lista de pastorais; não paroquiano digita o grupo
-  const lista = usarLista && !externo;
+  const externo = ehExterno();
+  // Pastoral com login: grupo fixo. Secretaria: lista de pastorais. Não paroquiano: digita o grupo.
+  const fixo = grupoFixo();
+  const lista = usarLista && !externo && !fixo;
   $('campo-grupo-lista').hidden = !lista;
   $('campo-grupo-texto').hidden = lista;
   f.grupo_lista.required = lista;
   f.grupo.required = !lista;
+  f.grupo.readOnly = !!fixo;
+  if (fixo) f.grupo.value = fixo;
   $('extras').hidden = !externo;
   ['endereco', 'paroquia', 'paroco', 'motivo'].forEach((n) => { f[n].required = externo; });
   $('obrig-motivo').hidden = !externo;
@@ -41,7 +48,7 @@ function aplicarPerfil() {
 // Preenche com os dados da última reserva (podem ser alterados)
 function preencherDados() {
   const f = $('form');
-  const s = sessao.solicitante || {};
+  const s = sessao?.solicitante || {};
   f.nome.value = s.nome || '';
   f.telefone.value = s.telefone || '';
   f.grupo.value = s.grupo || '';
@@ -49,7 +56,7 @@ function preencherDados() {
 
 async function iniciar() {
   await montarPagina('salas');
-  if (!exigirLogin()) return;
+  if (alterando && !exigirLogin()) return;
   if (!salaId || !/^\d{4}-\d{2}-\d{2}$/.test(data || '')) { location.href = 'index.html'; return; }
   $('voltar').href = `sala.html?id=${salaId}&data=${data}`;
 
@@ -72,8 +79,10 @@ async function iniciar() {
     $('limpar').hidden = true;
     $('perfil').innerHTML = `<span class="faixa-perfil">Alterando a reserva <b>${esc(alterando)}</b></span>`;
   } else {
-    preencherDados();
     await escolherPerfil();
+    // Pastoral, grupo ou movimento precisa do login; não paroquiano faz o pedido sem login
+    if (perfilAtual() !== 'externo' && !exigirLogin()) return;
+    preencherDados();
     faixaPerfil($('perfil'));
   }
 
@@ -103,7 +112,7 @@ async function iniciar() {
     $('turnos').innerHTML = ctx.turnos.map((t) => {
       const st = situacaoTurno(ctx, salaId, data, t);
       if (st.s === 'X') return `<label class="indisp"><input type="checkbox" disabled><b>${t.nome}</b><span>Não funciona</span></label>`;
-      const livre = st.s === 'L' && turnoReservavel(data, t, cfg, sessao.admin);
+      const livre = st.s === 'L' && turnoReservavel(data, t, cfg, sessao?.admin);
       const rotulo = st.s === 'L' ? (livre ? faixa(t) : 'Fora do prazo') : st.s === 'P' ? 'Pendente' : st.s === 'B' ? 'Bloqueada' : 'Reservado';
       return `<label class="${livre ? '' : 'indisp'}">
         <input type="checkbox" name="turno" value="${t.codigo}" ${livre ? '' : 'disabled'} ${livre && pedidos.includes(t.codigo) ? 'checked' : ''}>
@@ -144,9 +153,10 @@ async function iniciar() {
     }
     if (!f.nome.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o nome do responsável.');
     if (soDigitos(f.telefone.value).length < 10) return mostrarAviso($('msg'), 'erro', 'Informe o telefone com DDD.');
-    const externo = perfilAtual() === 'externo';
-    const grupo = usarLista && !externo ? f.grupo_lista.value : f.grupo.value.trim();
-    if (!grupo) return mostrarAviso($('msg'), 'erro', usarLista && !externo ? 'Selecione a sua pastoral, grupo ou movimento na lista.' : 'Informe a pastoral ou o grupo.');
+    const externo = ehExterno();
+    const daLista = usarLista && !externo && !grupoFixo();
+    const grupo = grupoFixo() || (daLista ? f.grupo_lista.value : f.grupo.value.trim());
+    if (!grupo) return mostrarAviso($('msg'), 'erro', daLista ? 'Selecione a sua pastoral, grupo ou movimento na lista.' : 'Informe a pastoral ou o grupo.');
     if (externo) {
       if (!f.endereco.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o endereço.');
       if (!f.paroquia.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a paróquia em que atua.');
@@ -160,6 +170,15 @@ async function iniciar() {
     $('enviar').disabled = true;
     $('enviar').textContent = 'Enviando…';
     try {
+      if (externo && !sessao) {
+        // Não paroquiano sem login: o comprovante abre pelo link secreto
+        const token = await solicitarReservaExterna({
+          salaId, data, turnos, nome: f.nome.value.trim(), telefone: f.telefone.value.trim(), grupo,
+          motivo: f.motivo.value.trim(), endereco: f.endereco.value.trim(), paroquia: f.paroquia.value.trim(), paroco: f.paroco.value.trim(),
+        });
+        location.href = `comprovante.html?t=${encodeURIComponent(token)}&novo=1`;
+        return;
+      }
       const codigo = await criarReserva({
         salaId, data, turnos,
         nome: f.nome.value.trim(),
@@ -188,8 +207,8 @@ function regra() {
     texto = `A reserva ${alterando} será cancelada e substituída por esta, com um novo código. `
       + (aprovacao ? `A nova reserva passa de novo pela aprovação da secretaria (até ${cfg.prazo_aprovacao_horas || 48} horas).` : 'A nova reserva é confirmada na hora.')
       + ' Se o novo horário não estiver disponível, nada muda.';
-  } else if (sessao.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
-  else if (perfilAtual() === 'externo' || sala?.controlada) texto = TEXTO_APROVACAO;
+  } else if (sessao?.admin) texto = 'Reserva feita pela secretaria: confirmada na hora.';
+  else if (ehExterno() || sala?.controlada) texto = TEXTO_APROVACAO;
   else texto = 'Sala comum: a reserva é confirmada na hora. Alterações e cancelamentos até o início do turno.';
   $('regra').innerHTML = `<span>${esc(texto)}</span>`;
 }

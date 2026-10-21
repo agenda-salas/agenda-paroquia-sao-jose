@@ -1,5 +1,5 @@
 // Direcionamento Espiritual: a pessoa vê os horários livres e pede um horário.
-// O pedido fica aguardando a confirmação da secretaria ou do Pároco.
+// O pedido fica aguardando a confirmação da secretaria ou do Pároco. Não precisa de login.
 import { sb, limparErro } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
 import {
@@ -106,16 +106,12 @@ function desenharDias() {
 
 // ---------------------------------------------------------------- pedido
 function abrirPedido(slot) {
-  if (!sessao) {
-    location.href = `entrar.html?volta=${encodeURIComponent(location.pathname)}`;
-    return;
-  }
   slotAtual = slot;
   const f = $('f-pedir');
   const nome = f.nome.value, tel = f.telefone.value, end = f.endereco.value;
   f.reset();
-  f.nome.value = nome || sessao.solicitante?.nome || '';
-  f.telefone.value = tel || sessao.solicitante?.telefone || '';
+  f.nome.value = nome || sessao?.solicitante?.nome || '';
+  f.telefone.value = tel || sessao?.solicitante?.telefone || '';
   f.endereco.value = end;
   $('pd-erro').hidden = true;
   $('pd-quando').textContent = `${dataLonga(slot.data)}, às ${hh(slot.inicio)}`;
@@ -180,8 +176,7 @@ function ligarPedido() {
     if (error) return erro(limparErro(error));
     $('dlg-pedir').close();
     aviso('ok', `Pedido enviado para ${dataLonga(slotAtual.data).toLowerCase()}, às ${hh(slotAtual.inicio)}. `
-      + (tipo === 'externo' ? 'A secretaria confirma em no máximo 48 horas.' : 'Você será avisado pelo WhatsApp quando for confirmado.')
-      + ' Acompanhe em Minhas reservas.');
+      + 'A secretaria ou o Pároco confirma e avisa você pelo WhatsApp. Para cancelar, fale com a secretaria paroquial.');
     await carregar();
   });
   document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));

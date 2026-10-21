@@ -27,7 +27,7 @@ const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, ''
 export async function carregarPastorais() {
   ligar();
   const [{ data, error }, { data: cfg }] = await Promise.all([
-    sb.from('pastorais').select('id, numero, nome, coordenadores, reunioes, observacao, atualizado_em'),
+    sb.from('pastorais').select('id, numero, nome, coordenadores, reunioes, observacao, atualizado_em, login_email, senha_acesso, user_id'),
     sb.from('configuracoes').select('chave, valor').eq('chave', 'pastorais_atualizadas_em'),
   ]);
   if (error) {
@@ -44,7 +44,7 @@ export async function carregarPastorais() {
 function desenhar() {
   const busca = semAcento($('pa-busca').value.trim());
   const lista = !busca ? pastorais : pastorais.filter((p) => semAcento([
-    p.numero, p.nome, p.observacao,
+    p.numero, p.nome, p.observacao, p.login_email,
     ...(p.coordenadores || []).flatMap((c) => [c.nome, c.telefone, c.email]),
   ].join(' ')).includes(busca));
 
@@ -55,6 +55,14 @@ function desenhar() {
   $('pa-lista').innerHTML = `<div class="grade-salas pa-grade">${lista.map(cartao).join('')}</div>`;
   $('pa-lista').querySelectorAll('[data-pa-alterar]').forEach((b) => b.addEventListener('click', () => abrir(Number(b.dataset.paAlterar))));
   $('pa-lista').querySelectorAll('[data-pa-excluir]').forEach((b) => b.addEventListener('click', () => excluir(Number(b.dataset.paExcluir))));
+  $('pa-lista').querySelectorAll('[data-pa-remover]').forEach((b) => b.addEventListener('click', () => removerAcesso(Number(b.dataset.paRemover))));
+  $('pa-lista').querySelectorAll('[data-pa-mostrar]').forEach((b) => b.addEventListener('click', () => {
+    const el = b.parentElement.querySelector('.pa-senha-valor');
+    const ver = b.getAttribute('aria-pressed') !== 'true';
+    el.textContent = ver ? el.dataset.senha : '••••••••';
+    b.setAttribute('aria-pressed', String(ver));
+    b.textContent = ver ? 'Ocultar' : 'Mostrar';
+  }));
 }
 
 function cartao(p) {
@@ -80,8 +88,17 @@ function cartao(p) {
           : '<span class="nota">Nenhuma reunião informada.</span>'}
       </div>
       ${p.observacao ? `<span class="nota">${esc(p.observacao)}</span>` : ''}
+      <div class="pa-sec pa-login">
+        <span class="pa-rot">Acesso ao sistema</span>
+        ${p.user_id ? `
+          <span><b>Login:</b> <span class="pa-email">${esc(p.login_email)}</span></span>
+          <span class="pa-senha-linha"><b>Senha:</b> <span class="pa-senha-valor" data-senha="${esc(p.senha_acesso || '')}">••••••••</span>
+            <button type="button" class="btn btn-sec btn-peq" data-pa-mostrar aria-pressed="false">Mostrar</button></span>`
+          : '<span class="etq etq-bloq" style="align-self:flex-start">Sem acesso</span>'}
+      </div>
       <div class="acoes pa-acoes">
         <button type="button" class="btn btn-sec btn-peq" data-pa-alterar="${p.id}">Alterar</button>
+        ${p.user_id ? `<button type="button" class="btn btn-sec btn-peq" data-pa-remover="${p.id}">Remover acesso</button>` : ''}
         <button type="button" class="btn btn-perigo btn-peq" data-pa-excluir="${p.id}">Excluir</button>
       </div>
     </article>`;
@@ -96,6 +113,9 @@ function abrir(id) {
   f.numero.value = p ? (p.numero ?? '') : (Math.max(0, ...pastorais.map((x) => x.numero || 0)) + 1);
   f.nome.value = p?.nome || '';
   f.observacao.value = p?.observacao || '';
+  f.login_email.value = p?.login_email || '';
+  f.senha_acesso.value = p?.senha_acesso || '';
+  verSenha(false);
   coords = (p?.coordenadores || []).map((c) => ({ ...COORD_VAZIO(), ...c }));
   reunioes = (p?.reunioes || []).map((r) => ({ ...REUNIAO_VAZIA(), ...r }));
   if (!coords.length) coords.push(COORD_VAZIO());
@@ -157,22 +177,67 @@ async function salvar(e) {
   const re = reunioes.map(limpo).filter((r) => !vazio(r));
   if (re.some((r) => !r.dia)) return erro('Informe o dia de cada reunião (ou remova a linha).');
 
+  const login = f.login_email.value.trim().toLowerCase();
+  const senha = f.senha_acesso.value;
+  const atual = pastorais.find((p) => p.id === editando);
+  if (login || senha) {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(login)) return erro('Informe um e-mail válido para o login.');
+    if (senha.length < 6) return erro('A senha de acesso precisa ter pelo menos 6 caracteres.');
+  } else if (atual?.user_id && !confirm(`Login e senha em branco: o acesso de "${atual.nome}" ao sistema será removido. Continuar?`)) {
+    return;
+  }
+
   const dados = { numero, nome, coordenadores: co, reunioes: re, observacao: f.observacao.value.trim() || null };
   const bt = $('pa-salvar');
   bt.disabled = true;
-  const { error } = editando
-    ? await sb.from('pastorais').update(dados).eq('id', editando)
-    : await sb.from('pastorais').insert(dados);
+  try {
+    if (editando) {
+      const { error } = await sb.from('pastorais').update(dados).eq('id', editando);
+      if (error) throw error;
+    } else {
+      const { data, error } = await sb.from('pastorais').insert(dados).select('id').single();
+      if (error) throw error;
+      editando = data.id;            // se o acesso falhar, salvar de novo só atualiza
+    }
+    // Login e senha: cria, altera ou remove a conta da pastoral
+    const mudou = login !== (atual?.login_email || '') || senha !== (atual?.senha_acesso || '');
+    if (login && (mudou || !atual?.user_id)) {
+      const { error } = await sb.rpc('salvar_acesso_pastoral', { p_pastoral: editando, p_email: login, p_senha: senha });
+      if (error) throw error;
+    } else if (!login && atual?.user_id) {
+      const { error } = await sb.rpc('remover_acesso_pastoral', { p_pastoral: editando });
+      if (error) throw error;
+    }
+  } catch (err) {
+    bt.disabled = false;
+    await carregarPastorais().catch(() => {});
+    return erro(limparErro(err));
+  }
   bt.disabled = false;
-  if (error) return erro(limparErro(error));
   $('dlg-pastoral').close();
-  aviso('ok', editando ? `${nome}: dados alterados.` : `${nome}: incluída no cadastro.`);
+  aviso('ok', atual ? `${nome}: dados alterados.` : `${nome}: incluída no cadastro.`);
   await carregarPastorais();
+}
+
+async function removerAcesso(id) {
+  const p = pastorais.find((x) => x.id === id);
+  if (!p || !confirm(`Remover o acesso de "${p.nome}"? O login ${p.login_email} deixa de funcionar e quem estiver conectado sai. As reservas já feitas continuam.`)) return;
+  const { error } = await sb.rpc('remover_acesso_pastoral', { p_pastoral: id });
+  if (error) return aviso('erro', limparErro(error));
+  aviso('ok', `${p.nome}: acesso removido.`);
+  await carregarPastorais();
+}
+
+function verSenha(ver) {
+  const i = $('f-pastoral').senha_acesso;
+  i.type = ver ? 'text' : 'password';
+  $('pa-ver-senha').setAttribute('aria-pressed', String(ver));
+  $('pa-ver-senha').textContent = ver ? 'Ocultar' : 'Mostrar';
 }
 
 async function excluir(id) {
   const p = pastorais.find((x) => x.id === id);
-  if (!p || !confirm(`Excluir "${p.nome}" do cadastro? Os coordenadores e as reuniões desta pastoral também serão apagados. As reservas já feitas não mudam.`)) return;
+  if (!p || !confirm(`Excluir "${p.nome}" do cadastro? Os coordenadores, as reuniões e o login de acesso desta pastoral também serão apagados. As reservas já feitas não mudam.`)) return;
   const { error } = await sb.from('pastorais').delete().eq('id', id);
   if (error) return aviso('erro', limparErro(error));
   aviso('ok', `${p.nome}: excluída do cadastro.`);
@@ -195,5 +260,6 @@ function ligar() {
     $('pa-reunioes').querySelector('li:last-child input')?.focus();
   });
   $('f-pastoral').addEventListener('submit', salvar);
+  $('pa-ver-senha').addEventListener('click', () => verSenha($('pa-ver-senha').getAttribute('aria-pressed') !== 'true'));
   document.querySelector('[data-fechar-pastoral]').addEventListener('click', () => $('dlg-pastoral').close());
 }

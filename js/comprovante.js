@@ -2,8 +2,10 @@
 import { SITE_URL } from './config.js';
 import { dataLonga, faixa } from './util.js';
 
-export function linkComprovante(codigo) {
-  return `${SITE_URL}/comprovante.html?c=${encodeURIComponent(codigo)}`;
+export function linkComprovante(codigo, token) {
+  return token
+    ? `${SITE_URL}/comprovante.html?t=${encodeURIComponent(token)}`
+    : `${SITE_URL}/comprovante.html?c=${encodeURIComponent(codigo)}`;
 }
 
 export const TEXTO_ITENS = 'Você receberá a sala com os itens abaixo. Ao fim da reserva deixe-os da forma como os encontrou. Qualquer ocorrência procure a secretaria da Paróquia no primeiro horário útil seguinte.';
@@ -28,10 +30,10 @@ export function textoComprovante(linhas) {
 
 // Abre o menu de compartilhar do celular (WhatsApp, grupo da pastoral etc.).
 // No computador, copia o texto e o link para colar onde quiser.
-export async function compartilhar(linhas) {
+export async function compartilhar(linhas, token) {
   const r = linhas[0];
   const texto = textoComprovante(linhas);
-  const url = linkComprovante(r.codigo);
+  const url = linkComprovante(r.codigo, token);
   if (navigator.share) {
     try {
       await navigator.share({ title: `Comprovante ${r.codigo}`, text: texto, url });

@@ -1,5 +1,5 @@
 // Comprovante (link único): mostra sempre os dados atuais da reserva
-import { obterComprovante, dadosDaMinhaReserva, cancelarMinhaReserva } from '../api.js';
+import { obterComprovante, obterComprovanteToken, cancelarPorToken, dadosDaMinhaReserva, cancelarMinhaReserva } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
 import { param, dataLonga, faixa, esc, ICONES } from '../util.js';
 import { compartilhar, TEXTO_ITENS } from '../comprovante.js';
@@ -18,11 +18,12 @@ async function iniciar() {
   await montarPagina('minhas');
   const el = document.getElementById('comp');
   const codigo = param('c');
-  if (!codigo) { el.innerHTML = '<div class="vazio">Código do comprovante não informado.</div>'; return; }
+  const token = param('t');            // link secreto dos pedidos feitos sem login
+  if (!codigo && !token) { el.innerHTML = '<div class="vazio">Código do comprovante não informado.</div>'; return; }
 
   let linhas;
   try {
-    linhas = await obterComprovante(codigo);
+    linhas = token ? await obterComprovanteToken(token) : await obterComprovante(codigo);
   } catch (e) {
     el.innerHTML = `<div class="vazio">Não foi possível abrir o comprovante. ${esc(e.message)}</div>`;
     return;
@@ -35,19 +36,25 @@ async function iniciar() {
   const turnos = linhas.map((l) => `${esc(l.turno)} · ${faixa(l)}`).join('<br>');
   const valido = r.status === 'confirmada';
   const podeCompartilhar = ['confirmada', 'pendente'].includes(r.status);
-  const ehDono = !!sessao;
+  const ehDono = !!sessao && !token;
 
   // Cancelar/alterar: só o dono, reserva ativa e antes do início do turno
   let minhas = [];
-  if (sessao && ['pendente', 'confirmada'].includes(r.status)) {
+  if (sessao && !token && ['pendente', 'confirmada'].includes(r.status)) {
     try { minhas = await dadosDaMinhaReserva(r.codigo); } catch { minhas = []; }
   }
   const ativas = minhas.filter((m) => ['pendente', 'confirmada'].includes(m.status));
   const comecou = (m) => new Date(`${m.data}T${m.turnos.inicio.slice(0, 5)}:00-03:00`).getTime() <= Date.now();
   const podeMexer = ativas.length > 0 && !ativas.some(comecou);
+  // Pedido sem login: cancela pelo próprio link enquanto o turno não começou
+  const comecouLinha = (l) => new Date(`${l.data}T${String(l.inicio).slice(0, 5)}:00-03:00`).getTime() <= Date.now();
+  const podeCancelarLink = !!token && ['pendente', 'confirmada'].includes(r.status) && !linhas.some(comecouLinha);
+  const novo = !!param('novo');
 
   let nota = '';
-  if (r.status === 'pendente') nota = 'A secretaria vai analisar o pedido. Guarde este link: quando a reserva for aprovada, esta página mostrará o comprovante confirmado.';
+  if (r.status === 'pendente') nota = token
+    ? 'A secretaria vai analisar o pedido. Guarde o link desta página: é por ele que você acompanha a resposta e, se precisar, cancela o pedido.'
+    : 'A secretaria vai analisar o pedido. Guarde este link: quando a reserva for aprovada, esta página mostrará o comprovante confirmado.';
   if (r.status === 'recusada') nota = `Motivo: ${esc(r.motivo_recusa || 'não informado')}.`;
 
   // Reserva que não será usada: troca as orientações de uso por uma mensagem de encerramento
@@ -60,6 +67,11 @@ async function iniciar() {
 
 
   el.innerHTML = `
+    ${token && novo ? `
+    <div class="aviso aviso-info nao-imprimir comp-link-secreto">
+      <span><b>Guarde este link.</b> Ele é secreto e é o único jeito de acompanhar e cancelar este pedido. Salve nos favoritos ou envie para você mesmo pelo WhatsApp.</span>
+      <button type="button" class="btn btn-peq" id="copiar-link">Copiar link</button>
+    </div>` : ''}
     <div class="comp-marca">
       <img src="img/brasao.png" alt="Brasão da Paróquia São José" onerror="this.remove()">
       <div><b>Reservas de salas</b><span style="font-weight:700">Paróquia São José</span></div>
@@ -104,6 +116,12 @@ async function iniciar() {
     </div>
     <div id="gerir-msg" class="aviso nao-imprimir" hidden role="alert"></div>` : ''}
 
+    ${podeCancelarLink ? `
+    <div class="nao-imprimir comp-gerir">
+      <button type="button" class="btn btn-perigo btn-grande" style="flex:1" id="cancelar-link">Cancelar pedido</button>
+    </div>
+    <div id="gerir-msg" class="aviso nao-imprimir" hidden role="alert"></div>` : ''}
+
     <div class="nao-imprimir acoes" style="justify-content:center">
       <a href="index.html" class="btn btn-sec">Voltar às salas</a>
       ${ehDono ? '<a href="minhas-reservas.html" class="btn btn-sec">Minhas reservas</a>' : ''}
@@ -123,9 +141,33 @@ async function iniciar() {
       m.hidden = false;
     }
   });
+  document.getElementById('cancelar-link')?.addEventListener('click', async (e) => {
+    if (!confirm(`Cancelar o pedido ${r.codigo}? O horário fica livre para outros grupos. Esta ação não pode ser desfeita.`)) return;
+    e.target.disabled = true;
+    try {
+      await cancelarPorToken(token);
+      location.replace(`comprovante.html?t=${encodeURIComponent(token)}`);
+    } catch (err) {
+      e.target.disabled = false;
+      const m = document.getElementById('gerir-msg');
+      m.className = 'aviso aviso-erro nao-imprimir';
+      m.textContent = err.message;
+      m.hidden = false;
+    }
+  });
+  document.getElementById('copiar-link')?.addEventListener('click', async (e) => {
+    const link = location.href.replace(/&novo=1/, '');
+    try {
+      await navigator.clipboard.writeText(link);
+      e.target.textContent = 'Link copiado';
+    } catch {
+      e.target.closest('.comp-link-secreto').querySelector('span').innerHTML += `<br><span class="pa-email">${esc(link)}</span>`;
+      e.target.hidden = true;
+    }
+  });
   document.getElementById('baixar')?.addEventListener('click', () => window.print());
   document.getElementById('compartilhar')?.addEventListener('click', async () => {
-    const resultado = await compartilhar(linhas);
+    const resultado = await compartilhar(linhas, token);
     const msg = document.getElementById('comp-msg');
     if (resultado === 'copiado') {
       msg.className = 'aviso aviso-ok';

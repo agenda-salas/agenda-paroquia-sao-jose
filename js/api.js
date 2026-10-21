@@ -104,6 +104,34 @@ export async function criarReserva({ salaId, data, turnos, nome, telefone, grupo
   return codigo;
 }
 
+// Pedido de não paroquiano sem login: retorna o código secreto do comprovante
+export async function solicitarReservaExterna({ salaId, data, turnos, nome, telefone, grupo, motivo, endereco, paroquia, paroco }) {
+  const { data: token, error } = await sb.rpc('solicitar_reserva_externa', {
+    p_sala_id: salaId, p_data: data, p_turnos: turnos, p_nome: nome, p_telefone: telefone, p_grupo: grupo,
+    p_motivo: motivo || null, p_endereco: endereco || null, p_paroquia: paroquia || null, p_paroco: paroco || null,
+  });
+  if (error) throw new Error(limparErro(error));
+  return token;
+}
+
+export async function obterComprovanteToken(token) {
+  const { data, error } = await sb.rpc('obter_comprovante_token', { p_token: token });
+  if (error) throw new Error(limparErro(error));
+  return data || [];
+}
+
+export async function cancelarPorToken(token) {
+  const { data, error } = await sb.rpc('cancelar_por_token', { p_token: token });
+  if (error) throw new Error(limparErro(error));
+  return data;
+}
+
+// Troca a senha da própria conta (e atualiza a senha registrada no cadastro da pastoral)
+export async function alterarMinhaSenha(senha) {
+  const { error } = await sb.rpc('alterar_minha_senha', { p_senha: senha });
+  if (error) throw new Error(limparErro(error));
+}
+
 export async function obterComprovante(codigo) {
   const { data, error } = await sb.rpc('obter_comprovante', { p_codigo: codigo });
   if (error) throw new Error(limparErro(error));
@@ -184,6 +212,6 @@ export function limparErro(error) {
   if (/User already registered/i.test(m)) return 'Este e-mail já tem cadastro. Use a aba Entrar.';
   if (/Password should be at least/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
   if (/rate limit/i.test(m)) return 'Muitas tentativas seguidas. Aguarde um minuto.';
-  if (/Signups not allowed/i.test(m)) return 'Novos cadastros estão desativados no momento.';
+  if (/Signups not allowed/i.test(m)) return 'O acesso é criado pela secretaria paroquial.';
   return m;
 }

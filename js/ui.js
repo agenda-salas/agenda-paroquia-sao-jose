@@ -4,28 +4,31 @@ import { esc, iniciais } from './util.js';
 
 const raiz = document.querySelector('meta[name="raiz"]')?.content || '.';
 
-export let sessao = null;     // { user, solicitante, admin }
+export let sessao = null;     // { user, solicitante, admin, pastoral }
 
 export async function carregarSessao() {
   const { data } = await sb.auth.getSession();
   const user = data.session?.user || null;
   if (!user) { sessao = null; return null; }
-  const [{ data: solicitante }, { data: admin }] = await Promise.all([
+  const [{ data: solicitante }, { data: admin }, { data: pastoral }] = await Promise.all([
     sb.from('solicitantes').select('*').eq('id', user.id).maybeSingle(),
     sb.rpc('is_admin'),
+    sb.rpc('minha_pastoral'),
   ]);
-  sessao = { user, solicitante, admin: !!admin };
+  sessao = { user, solicitante, admin: !!admin, pastoral: (typeof pastoral === 'string' && pastoral) || null };
   return sessao;
 }
 
 export async function montarPagina(ativo) {
   await carregarSessao().catch(() => null);
-  const nome = sessao?.solicitante?.nome || sessao?.user?.email || '';
+  const nome = sessao?.pastoral || sessao?.solicitante?.nome || sessao?.user?.email || '';
   const conta = sessao
     ? `<span class="usuario" title="${esc(sessao.user.email)}"><span class="avatar">${esc(iniciais(nome))}</span>${esc(nome.split(' ')[0])}</span>
        <a href="${raiz}/entrar.html?alterar=1" class="${ativo === 'senha' ? 'ativo' : ''}">Alterar senha</a>
        <button type="button" id="sair">Sair</button>`
-    : `<a href="${raiz}/entrar.html?volta=${encodeURIComponent(location.pathname + location.search)}" class="btn-entrar">Entrar</a>`;
+    : perfilAtual() === 'externo'
+      ? '<button type="button" id="sair">Sair</button>'   // não paroquiano (sem login): volta à escolha inicial
+      : `<a href="${raiz}/entrar.html?volta=${encodeURIComponent(location.pathname + location.search)}" class="btn-entrar">Entrar</a>`;
 
   const topo = document.createElement('header');
   topo.className = 'topo';
@@ -57,7 +60,7 @@ export async function montarPagina(ativo) {
 
   document.getElementById('sair')?.addEventListener('click', async () => {
     esquecerPerfil();   // ao sair, a escolha de acesso é feita de novo
-    await sb.auth.signOut();
+    if (sessao) await sb.auth.signOut();
     location.href = `${raiz}/index.html`;
   });
 
@@ -98,7 +101,8 @@ export function avisoCache(quando) {
 }
 
 // ---------------------------------------------------------------- perfil
-// "paroquiano" ou "externo" (não paroquiano). Vale até a pessoa clicar em Sair.
+// "paroquiano" (pastoral, grupo ou movimento, com login) ou "externo" (não paroquiano, sem login).
+// Vale até a pessoa clicar em Sair.
 const CHAVE_PERFIL = 'salas-sj:perfil';
 
 export function perfilAtual() {
@@ -114,7 +118,7 @@ export function esquecerPerfil() {
 }
 
 export function nomePerfil(p) {
-  return p === 'externo' ? 'Não paroquiano' : 'Paroquiano';
+  return p === 'externo' ? 'Não paroquiano' : 'Pastoral, grupo ou movimento';
 }
 
 const ICONE_PERFIL = {
@@ -126,6 +130,8 @@ const icone = (k) => `<svg width="34" height="34" viewBox="0 0 24 24" fill="none
 
 // Caixas de acesso. Só pergunta se ainda não escolheu; a escolha não muda até Sair.
 export function escolherPerfil() {
+  // Conta de pastoral conectada: não pergunta
+  if (sessao && !sessao.admin) { guardarPerfil('paroquiano'); return Promise.resolve('paroquiano'); }
   const atual = perfilAtual();
   if (atual) return Promise.resolve(atual);
   return new Promise((resolve) => {
@@ -140,13 +146,13 @@ export function escolherPerfil() {
       </div>
       <div class="perfil-opcoes">
         <button type="button" class="perfil-opcao" data-perfil="paroquiano">
-          <span class="perfil-ic">${icone('paroquiano')}</span><b>Sou Paroquiano</b>
+          <span class="perfil-ic">${icone('paroquiano')}</span><span class="perfil-tx"><b>Pastoral, Grupo ou Movimento</b><span class="perfil-det">Entrar com o login da pastoral</span></span>
         </button>
         <button type="button" class="perfil-opcao" data-perfil="externo">
-          <span class="perfil-ic">${icone('externo')}</span><b>Não sou Paroquiano</b>
+          <span class="perfil-ic">${icone('externo')}</span><span class="perfil-tx"><b>Não sou Paroquiano</b><span class="perfil-det">Pedido sem login, com aprovação</span></span>
         </button>
         <a class="perfil-opcao" href="${raiz}/direcionamento.html">
-          <span class="perfil-ic">${icone('direcionamento')}</span><b>Direcionamento Espiritual</b>
+          <span class="perfil-ic">${icone('direcionamento')}</span><span class="perfil-tx"><b>Direcionamento Espiritual</b><span class="perfil-det">Pedir horário com o Pároco</span></span>
         </a>
       </div>`;
     document.body.append(dlg);
@@ -154,6 +160,11 @@ export function escolherPerfil() {
     dlg.addEventListener('close', () => { dlg.remove(); resolve(perfilAtual()); });
     dlg.querySelectorAll('[data-perfil]').forEach((b) => b.addEventListener('click', () => {
       guardarPerfil(b.dataset.perfil);
+      // Pastoral sem login: vai para a tela de entrar e volta para onde estava
+      if (b.dataset.perfil === 'paroquiano' && !sessao) {
+        location.href = `${raiz}/entrar.html?volta=${encodeURIComponent(location.pathname + location.search)}`;
+        return;
+      }
       dlg.close();
     }));
     dlg.showModal();
@@ -163,5 +174,6 @@ export function escolherPerfil() {
 // Faixa "Acesso: ..." (sem troca; para mudar, é preciso sair e entrar de novo)
 export function faixaPerfil(el) {
   const p = perfilAtual();
+  if (sessao?.pastoral) { el.innerHTML = `<span class="faixa-perfil">Pastoral: <b>${esc(sessao.pastoral)}</b></span>`; return; }
   el.innerHTML = p ? `<span class="faixa-perfil">Acesso: <b>${nomePerfil(p)}</b></span>` : '';
 }

@@ -10,20 +10,16 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=25">
+<link rel="stylesheet" href="css/style.css?v=26">
 </head>
 <body>
 <main class="pagina">
   <div class="estreito cartao form">
-    <div class="abas" role="tablist">
-      <button type="button" role="tab" id="aba-entrar" aria-selected="true" aria-controls="f-entrar">Entrar</button>
-      <button type="button" role="tab" id="aba-cadastro" aria-selected="false" aria-controls="f-cadastro">Primeiro acesso</button>
-    </div>
-
     <div id="msg" class="aviso" hidden role="status"></div>
 
-    <form id="f-entrar" class="form" role="tabpanel" aria-labelledby="aba-entrar">
+    <form id="f-entrar" class="form">
       <h1 style="font-size:24px">Entrar</h1>
+      <p class="nota" style="margin:0">Use o login e a senha da sua pastoral, grupo ou movimento, fornecidos pela secretaria paroquial à coordenação.</p>
       <label class="campo">E-mail
         <input type="email" name="email" autocomplete="email" required>
       </label>
@@ -32,22 +28,7 @@
       </label>
       <button type="submit" class="btn btn-grande">Entrar</button>
       <button type="button" class="btn btn-sec" id="esqueci">Esqueci minha senha</button>
-    </form>
-
-    <form id="f-cadastro" class="form" role="tabpanel" aria-labelledby="aba-cadastro" hidden>
-      <h1 style="font-size:24px">Criar acesso</h1>
-      <p class="nota" style="margin:0">Só e-mail e senha. Nome, telefone e pastoral ou grupo são informados em cada reserva.</p>
-      <label class="campo">E-mail
-        <input type="email" name="email" autocomplete="email" required>
-      </label>
-      <label class="campo">Senha (mínimo de 6 caracteres)
-        <input type="password" name="senha" autocomplete="new-password" minlength="6" required>
-      </label>
-      <label class="marcar">
-        <input type="checkbox" name="aceite" required>
-        <span>Autorizo a Paróquia São José a guardar meu nome, telefone e e-mail para gerenciar as reservas de salas. Esses dados ficam visíveis apenas para a secretaria.</span>
-      </label>
-      <button type="submit" class="btn btn-grande">Criar acesso e entrar</button>
+      <p class="nota" style="margin:0">Não paroquiano não precisa de login: volte ao início e escolha "Não sou Paroquiano".</p>
     </form>
 
     <form id="f-nova" class="form" hidden>
