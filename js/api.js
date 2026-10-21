@@ -48,6 +48,13 @@ export async function carregarTurnos() {
 }
 
 // Nomes de pastorais e grupos já usados (sugestões ao digitar)
+// Nomes do cadastro de Pastorais e Movimentos (lista do campo "Pastoral ou grupo")
+export async function nomesPastorais() {
+  const { data, error } = await sb.rpc('nomes_pastorais');
+  if (error) return [];
+  return (data || []).map((x) => (typeof x === 'string' ? x : x.nomes_pastorais)).filter(Boolean);
+}
+
 export async function gruposUsados() {
   const { data, error } = await sb.rpc('grupos_usados');
   if (error) return [];

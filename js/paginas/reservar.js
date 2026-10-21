@@ -1,5 +1,5 @@
 // Formulário de reserva: nome, telefone e grupo informados a cada reserva
-import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, criarReserva, nomeSala, dadosDaMinhaReserva, alterarMinhaReserva } from '../api.js';
+import { carregarSala, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, gruposUsados, nomesPastorais, criarReserva, nomeSala, dadosDaMinhaReserva, alterarMinhaReserva } from '../api.js';
 import { montarPagina, exigirLogin, mostrarAviso, sessao, escolherPerfil, faixaPerfil, perfilAtual } from '../ui.js';
 import { param, dataLonga, faixa, esc, mascaraTelefone, soDigitos } from '../util.js';
 import { indexarAgenda, situacaoTurno, turnoReservavel } from '../calendario.js';
@@ -9,6 +9,7 @@ const salaId = Number(param('sala'));
 const data = param('data');
 const pedidos = (param('turnos') || '').split(',').filter(Boolean);
 let sala, cfg = {}, enviando = false;
+let usarLista = false;                                        // paroquiano escolhe a pastoral na lista do cadastro
 const alterando = (param('alterar') || '').toUpperCase();   // código da reserva que está sendo alterada
 let antigas = [];                                             // turnos ativos da reserva antiga
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
@@ -19,6 +20,12 @@ function aplicarPerfil() {
   if (alterando) { regra(); return; }
   const f = $('form');
   const externo = perfilAtual() === 'externo';
+  // Paroquiano escolhe na lista de pastorais; não paroquiano digita o grupo
+  const lista = usarLista && !externo;
+  $('campo-grupo-lista').hidden = !lista;
+  $('campo-grupo-texto').hidden = lista;
+  f.grupo_lista.required = lista;
+  f.grupo.required = !lista;
   $('extras').hidden = !externo;
   ['endereco', 'paroquia', 'paroco', 'motivo'].forEach((n) => { f[n].required = externo; });
   $('obrig-motivo').hidden = !externo;
@@ -60,7 +67,7 @@ async function iniciar() {
     $('enviar').textContent = 'Confirmar alteração';
     $('voltar').href = `comprovante.html?c=${encodeURIComponent(alterando)}`;
     $('voltar').lastChild.textContent = 'Voltar à reserva';
-    [f.nome, f.telefone, f.grupo, f.motivo].forEach((i) => { i.closest('label').hidden = true; i.required = false; });
+    [f.nome, f.telefone, f.grupo, f.grupo_lista, f.motivo].forEach((i) => { i.closest('label').hidden = true; i.required = false; });
     $('extras').hidden = true;
     $('limpar').hidden = true;
     $('perfil').innerHTML = `<span class="faixa-perfil">Alterando a reserva <b>${esc(alterando)}</b></span>`;
@@ -71,15 +78,24 @@ async function iniciar() {
   }
 
   try {
-    const [sl, c, rt, ra, rb, grupos] = await Promise.all([
+    const [sl, c, rt, ra, rb, grupos, nomes] = await Promise.all([
       carregarSala(salaId), carregarConfig(), carregarTurnos(),
       carregarAgenda(data, data, salaId), carregarBloqueios(data, data, salaId), gruposUsados(),
+      alterando ? [] : nomesPastorais(),
     ]);
     sala = sl;
     cfg = c;
     if (!sala) { $('resumo').textContent = 'Sala não encontrada.'; return; }
     $('resumo').textContent = `${nomeSala(sala)} (${sala.capacidade} pessoas) · ${dataLonga(data)}`;
     $('lista-grupos').innerHTML = grupos.map((g) => `<option value="${esc(g)}"></option>`).join('');
+    if (nomes.length) {
+      usarLista = true;
+      const ordem = [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      f.grupo_lista.innerHTML = '<option value="">Selecione na lista</option>'
+        + ordem.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      // Já vem marcada a pastoral da última reserva, se ela estiver na lista
+      if (ordem.includes(f.grupo.value)) f.grupo_lista.value = f.grupo.value;
+    }
 
     const ctx = { turnos: rt.dados, indice: indexarAgenda(ra.dados), bloqueios: rb.dados };
     // Na alteração, os turnos da própria reserva antiga contam como livres
@@ -128,8 +144,9 @@ async function iniciar() {
     }
     if (!f.nome.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o nome do responsável.');
     if (soDigitos(f.telefone.value).length < 10) return mostrarAviso($('msg'), 'erro', 'Informe o telefone com DDD.');
-    if (!f.grupo.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a pastoral ou o grupo.');
     const externo = perfilAtual() === 'externo';
+    const grupo = usarLista && !externo ? f.grupo_lista.value : f.grupo.value.trim();
+    if (!grupo) return mostrarAviso($('msg'), 'erro', usarLista && !externo ? 'Selecione a sua pastoral, grupo ou movimento na lista.' : 'Informe a pastoral ou o grupo.');
     if (externo) {
       if (!f.endereco.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o endereço.');
       if (!f.paroquia.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a paróquia em que atua.');
@@ -147,7 +164,7 @@ async function iniciar() {
         salaId, data, turnos,
         nome: f.nome.value.trim(),
         telefone: f.telefone.value.trim(),
-        grupo: f.grupo.value.trim(),
+        grupo,
         motivo: f.motivo.value.trim(),
         tipo: externo ? 'externo' : 'paroquiano',
         endereco: externo ? f.endereco.value.trim() : null,

@@ -471,3 +471,30 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
   table.tabela-cartoes .acoes-cel { justify-content: flex-start; flex-wrap: wrap !important; gap: 8px; }
   table.tabela-cartoes .acoes-cel .btn { min-height: 40px; padding: 8px 14px; font-size: 14px; }
 }
+
+/* ---------- Gestão: Pastorais e Movimentos ---------- */
+.pa-busca { max-width: 420px; }
+.pa-grade { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.pa-cartao { display: flex; flex-direction: column; gap: 12px; border-top: 4px solid var(--dourado); }
+.pa-num { display: inline-block; min-width: 30px; margin-right: 8px; padding: 1px 7px; border-radius: 8px; background: var(--azul-claro); color: var(--azul); font-size: 13px; text-align: center; }
+.pa-sec { display: flex; flex-direction: column; gap: 4px; }
+.pa-rot { font-size: 11px; font-weight: 700; color: var(--texto-3); text-transform: uppercase; letter-spacing: .06em; }
+.pa-itens { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.pa-email { overflow-wrap: anywhere; }
+.pa-acoes { margin-top: auto; padding-top: 10px; border-top: 1px solid #EEF0F4; }
+.pa-cab { display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
+.pa-bloco { border: 1px solid var(--borda); border-radius: 14px; padding: 12px 14px 14px; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.pa-bloco legend { padding: 0 6px; font-weight: 800; color: var(--azul); }
+.pa-linha { display: grid; gap: 8px; align-items: center; }
+.pa-linha-coord { grid-template-columns: 1.2fr 1fr 1.3fr auto; }
+.pa-linha-reuniao { grid-template-columns: 1.1fr 1fr 80px 1fr auto; }
+.pa-linha input { font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--borda-2); border-radius: 10px; min-width: 0; }
+@media (max-width: 680px) {
+  .pa-grade { grid-template-columns: 1fr; }
+  .pa-cab { grid-template-columns: 76px 1fr; }
+  .pa-linha-coord, .pa-linha-reuniao { padding-bottom: 10px; border-bottom: 1px dashed var(--borda); }
+  .pa-linha-coord { grid-template-columns: 1fr; }
+  .pa-linha-reuniao { grid-template-columns: 1fr 96px; }
+  .pa-linha-reuniao input[data-c="dia"], .pa-linha-reuniao input[data-c="observacao"] { grid-column: 1 / -1; }
+  .pa-linha .btn { grid-column: 1 / -1; justify-self: start; }
+}

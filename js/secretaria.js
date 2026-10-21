@@ -3,9 +3,10 @@ import { sb, limparErro, nomeSala, carregarTurnos } from './api.js';
 import { esc, hojeISO, somaDias, dataLonga, dataCurta, faixa, linkWhatsApp, primeiroNome, DIAS_CURTOS, diaSemana } from './util.js';
 import { linkComprovante } from './comprovante.js';
 import { abrirAgendaParoco } from './agenda-paroco.js';
+import { carregarPastorais } from './pastorais.js';
 
 const $ = (id) => document.getElementById(id);
-const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento'];
+const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais'];
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
   confirmada: ['Confirmada', 'etq-ok'], pendente: ['Pendente', 'etq-pend'], recusada: ['Recusada', 'etq-res'],
@@ -168,6 +169,7 @@ const CARREGAR = {
   coordenadores: carregarCoordenadores,
   config: carregarConfig,
   direcionamento: () => abrirAgendaParoco({ user: usuario, secretaria: ehSecretaria }),
+  pastorais: carregarPastorais,
 };
 
 function abrirAba(nome) {

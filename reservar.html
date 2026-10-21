@@ -10,7 +10,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
 <main class="pagina">
@@ -34,7 +34,13 @@
     <label class="campo"><span>Telefone (WhatsApp) <span class="obrig" aria-hidden="true">*</span></span>
       <input type="tel" name="telefone" autocomplete="tel" placeholder="(61) 99999-9999" required>
     </label>
-    <label class="campo"><span>Pastoral ou grupo <span class="obrig" aria-hidden="true">*</span></span>
+    <label class="campo" id="campo-grupo-lista" hidden><span>Pastoral, grupo ou movimento <span class="obrig" aria-hidden="true">*</span></span>
+      <select name="grupo_lista">
+        <option value="">Selecione na lista</option>
+      </select>
+      <span class="nota" style="font-weight:500">Não encontrou o seu? Fale com a secretaria paroquial para incluí-lo.</span>
+    </label>
+    <label class="campo" id="campo-grupo-texto"><span>Pastoral ou grupo <span class="obrig" aria-hidden="true">*</span></span>
       <input type="text" name="grupo" list="lista-grupos" maxlength="80" placeholder="Ex.: Pastoral da Catequese" required>
       <datalist id="lista-grupos"></datalist>
     </label>
