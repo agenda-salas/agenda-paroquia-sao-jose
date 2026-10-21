@@ -250,6 +250,13 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: 14px; min-widt
 .abas-gestao { display: flex; gap: 4px; overflow-x: auto; background: var(--azul-claro); padding: 4px; border-radius: 12px; scrollbar-width: thin; }
 .abas-gestao button { flex: 0 0 auto; font: inherit; font-size: 14px; font-weight: 700; padding: 10px 14px; min-height: 44px; border: 0; border-radius: 9px; background: none; color: var(--texto-2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .abas-gestao button[aria-selected="true"] { background: var(--branco); color: var(--azul); box-shadow: 0 1px 3px rgba(47,74,46,.12); }
+/* Abas: passar o mouse, tocar ou aba aberta = fundo verde e texto branco */
+.abas-gestao button { transition: background-color .15s ease, color .15s ease; }
+.abas-gestao button:hover, .abas-gestao button:active, .abas-gestao button:focus,
+.abas-gestao button[aria-selected="true"] { background: var(--azul); color: var(--branco); outline: none; box-shadow: 0 2px 6px rgba(47,74,46,.25); }
+.abas-gestao button:focus-visible { outline: 2px solid var(--dourado); outline-offset: 2px; }
+.abas-gestao button .contador { box-shadow: 0 0 0 2px var(--branco); }
+@media (prefers-reduced-motion: reduce) { .abas-gestao button { transition: none; } }
 .contador { background: var(--perigo); color: #fff; font-size: 11.5px; font-weight: 800; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
 .aba { display: flex; flex-direction: column; gap: 16px; }
 .filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding: 16px; }
