@@ -9,9 +9,43 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const DIAS = 14;
-// Área de atendimento da paróquia: endereços que começam com QND ou QNE
-const MSG_AREA = 'Este endereço não pertence à área de atendimento da Paróquia São José (QND e QNE). Procure a paróquia e o pároco responsáveis pela região onde você mora.';
-const enderecoNaArea = (t) => /^(QND|QNE)/.test(String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
+// Endereço da área da paróquia: QND/QNE + quadra, [Conjunto X], Casa N ou Lote N + Apt/Casa N
+const MSG_AREA = 'O endereço informado não pertence à área de atendimento da Paróquia São José. Procure a paróquia e o pároco responsáveis pela região onde você mora.';
+const MSG_INCOMPLETO = 'Informe o endereço completo: quadra e número da casa, ou lote e apartamento. Ex.: QND XX Casa XX';
+const PALAVRAS = { CONJUNTO: 'Conjunto', CONJ: 'Conjunto', CJ: 'Conjunto', CASA: 'Casa', CS: 'Casa', LOTE: 'Lote', LT: 'Lote', APT: 'Apt', APTO: 'Apt', AP: 'Apt', APARTAMENTO: 'Apt' };
+// Mesmo padrão usado no banco (endereco_normalizado / endereco_situacao)
+function normalizarEndereco(t) {
+  return String(t || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Z0-9]+/g, ' ').replace(/([A-Z])(\d)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2')
+    .trim().replace(/\s+/g, ' ').replace(/^Q ?N ?([DE])(\s|$)/, 'QN$1$2')
+    .split(' ').map((w) => ({ CONJ: 'CONJUNTO', CJ: 'CONJUNTO', CS: 'CASA', LT: 'LOTE', AP: 'APT', APTO: 'APT', APARTAMENTO: 'APT' })[w] || w).join(' ');
+}
+function situacaoEndereco(t) {
+  const n = normalizarEndereco(t);
+  if (/^QN[DE] \d{1,3}( CONJUNTO [A-Z0-9]{1,3})? (CASA \d{1,4}|LOTE \d{1,4} (APT|CASA) \d{1,4})( .*)?$/.test(n)) return 'ok';
+  return /^QN[DE]( |$)/.test(n) ? 'incompleto' : 'fora';
+}
+// Texto arrumado: "QND 57 Conjunto A Casa 06" (o restante fica com a 1ª letra maiúscula)
+function formatarEndereco(t, ateOFim = true) {
+  const original = String(t || '');
+  const fimAberto = !ateOFim && /[A-Za-zÀ-ÿ]$/.test(original);   // palavra ainda sendo digitada
+  const palavras = normalizarEndereco(original).split(' ').filter(Boolean);
+  return palavras.map((w, i) => {
+    if (fimAberto && i === palavras.length - 1) return w;
+    if (i === 0 && /^QN[A-Z]$/.test(w)) return w;
+    if (PALAVRAS[w]) return PALAVRAS[w];
+    if (/^\d+$/.test(w) || w.length <= 2) return w;
+    return w[0] + w.slice(1).toLowerCase();
+  }).join(' ') + (/\s$/.test(original) && !ateOFim ? ' ' : '');
+}
+function mascaraEndereco(input) {
+  input.addEventListener('input', () => {
+    if (input.selectionStart !== input.value.length) return;   // só arruma quando digita no fim
+    const novo = formatarEndereco(input.value, false);
+    if (novo !== input.value) input.value = novo;
+  });
+  input.addEventListener('blur', () => { input.value = formatarEndereco(input.value); });
+}
 const PUBLICO = { paroquianos: 'Paroquianos', enfermos: 'Enfermos' };
 const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'Enfermo' };
 
@@ -149,6 +183,8 @@ function ajustar() {
 function ligarPedido() {
   const f = $('f-pedir');
   mascaraTelefone(f.telefone);
+  mascaraEndereco(f.endereco);
+  f.addEventListener('input', () => { $('pd-erro').hidden = true; });   // ao corrigir, o aviso some
   const erro = (t) => { $('pd-erro').textContent = t; $('pd-erro').hidden = false; };
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -157,7 +193,10 @@ function ligarPedido() {
     if (!f.nome.value.trim()) return erro('Informe o nome.');
     if (soDigitos(f.telefone.value).length < 10) return erro('Informe o telefone com DDD.');
     if (!f.endereco.value.trim()) return erro('Informe o endereço.');
-    if (!enderecoNaArea(f.endereco.value)) return erro(MSG_AREA);
+    f.endereco.value = formatarEndereco(f.endereco.value);
+    const sit = situacaoEndereco(f.endereco.value);
+    if (sit === 'fora') return erro(MSG_AREA);
+    if (sit === 'incompleto') return erro(MSG_INCOMPLETO);
     if (tipo === 'enfermo' && !f.local.value.trim()) return erro('Informe o local onde o enfermo se encontra.');
     if (tipo === 'externo' && !f.paroquia.value.trim()) return erro('Informe a paróquia em que atua.');
     if (tipo === 'externo' && !f.paroco.value.trim()) return erro('Informe o nome do pároco responsável.');
