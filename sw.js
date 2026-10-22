@@ -1,6 +1,6 @@
 // Service worker: guarda as telas para abrir sem internet.
 // Os dados da agenda ficam guardados pelo próprio app (última agenda baixada).
-const VERSAO = 'salas-sj-v32';
+const VERSAO = 'salas-sj-v33';
 const ARQUIVOS = [
   './', './index.html', './sala.html', './entrar.html', './reservar.html', './comprovante.html', './minhas-reservas.html',
   './secretaria.html', './atendimentos.html', './direcionamento.html', './css/style.css?v=22',
