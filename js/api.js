@@ -212,6 +212,6 @@ export function limparErro(error) {
   if (/User already registered/i.test(m)) return 'Este e-mail já tem cadastro. Use a aba Entrar.';
   if (/Password should be at least/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
   if (/rate limit/i.test(m)) return 'Muitas tentativas seguidas. Aguarde um minuto.';
-  if (/Signups not allowed/i.test(m)) return 'O acesso é criado pela secretaria paroquial.';
+  if (/Signups not allowed/i.test(m)) return 'O acesso é criado pela secretaria paroquial: (61) 3354-2921.';
   return m;
 }

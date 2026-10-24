@@ -1,8 +1,8 @@
 // Comprovante (link único): mostra sempre os dados atuais da reserva
 import { obterComprovante, obterComprovanteToken, cancelarPorToken, dadosDaMinhaReserva, cancelarMinhaReserva } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
-import { param, dataLonga, faixa, esc, ICONES } from '../util.js';
-import { compartilhar, TEXTO_ITENS } from '../comprovante.js';
+import { param, dataLonga, faixa, esc, ICONES, linkWhatsApp } from '../util.js';
+import { compartilhar, TEXTO_ITENS, textoComprovante, linkComprovante } from '../comprovante.js';
 
 const STATUS = {
   confirmada:     { titulo: 'Reserva confirmada', cor: 'var(--verde-tx)', fundo: 'var(--verde-bg)', icone: 'ok' },
@@ -61,7 +61,7 @@ async function iniciar() {
   const FINAL = {
     recusada: 'Pedimos desculpas, mas não foi possível confirmar sua reserva pelo motivo acima. Solicite um novo agendamento em outra data. Agradecemos a compreensão.',
     cancelada: 'Esta reserva foi cancelada e não é mais válida. Se ainda precisar do espaço, faça uma nova reserva. Agradecemos.',
-    expirada: 'O pedido não foi analisado dentro do prazo e o horário foi liberado. Se ainda precisar do espaço, faça uma nova reserva ou fale com a secretaria paroquial. Agradecemos a compreensão.',
+    expirada: 'O pedido não foi analisado dentro do prazo e o horário foi liberado. Se ainda precisar do espaço, faça uma nova reserva ou fale com a secretaria paroquial (61) 3354-2921. Agradecemos a compreensão.',
   };
   const semUso = !!FINAL[r.status];
 
@@ -104,7 +104,8 @@ async function iniciar() {
 
     ${podeCompartilhar ? `
     <div class="nao-imprimir" style="display:flex;flex-direction:column;gap:8px">
-      <button type="button" class="btn btn-grande" id="compartilhar">${ICONES.compartilhar}Compartilhar</button>
+      ${token ? `<a class="btn btn-grande" id="meu-zap" target="_blank" rel="noopener">Enviar para o meu WhatsApp</a>` : ''}
+      <button type="button" class="${token ? 'btn btn-sec' : 'btn btn-grande'}" id="compartilhar">${ICONES.compartilhar}Compartilhar</button>
       ${valido ? `<button type="button" class="btn btn-sec" id="baixar">${ICONES.baixar}Baixar PDF</button>` : ''}
       <div id="comp-msg" class="aviso" hidden role="status"></div>
     </div>` : ''}
@@ -165,6 +166,14 @@ async function iniciar() {
       e.target.hidden = true;
     }
   });
+  // Comprovante e link de acompanhamento no WhatsApp do próprio solicitante
+  const zap = document.getElementById('meu-zap');
+  if (zap) {
+    let fone = '';
+    try { fone = sessionStorage.getItem(`zap:${token}`) || ''; } catch {}
+    const texto = `${textoComprovante(linhas)}\n${linkComprovante(r.codigo, token)}\n\nGuarde esta mensagem: pelo link você acompanha a aprovação da secretaria e pode cancelar o pedido.`;
+    zap.href = fone ? linkWhatsApp(fone, texto) : `https://wa.me/?text=${encodeURIComponent(texto)}`;
+  }
   document.getElementById('baixar')?.addEventListener('click', () => window.print());
   document.getElementById('compartilhar')?.addEventListener('click', async () => {
     const resultado = await compartilhar(linhas, token);

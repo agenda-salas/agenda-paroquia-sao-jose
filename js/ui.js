@@ -4,24 +4,30 @@ import { esc, iniciais } from './util.js';
 
 const raiz = document.querySelector('meta[name="raiz"]')?.content || '.';
 
-export let sessao = null;     // { user, solicitante, admin, pastoral }
+export let sessao = null;     // { user, solicitante, admin, pastoral, pastorais }
 
 export async function carregarSessao() {
   const { data } = await sb.auth.getSession();
   const user = data.session?.user || null;
   if (!user) { sessao = null; return null; }
-  const [{ data: solicitante }, { data: admin }, { data: pastoral }] = await Promise.all([
+  const [{ data: solicitante }, { data: admin }, { data: lista, error: eLista }] = await Promise.all([
     sb.from('solicitantes').select('*').eq('id', user.id).maybeSingle(),
     sb.rpc('is_admin'),
-    sb.rpc('minha_pastoral'),
+    sb.rpc('minhas_pastorais'),
   ]);
-  sessao = { user, solicitante, admin: !!admin, pastoral: (typeof pastoral === 'string' && pastoral) || null };
+  // Um mesmo login pode ser de várias pastorais
+  let pastorais = (lista || []).map((x) => (typeof x === 'string' ? x : x.minhas_pastorais)).filter(Boolean);
+  if (eLista) {
+    const { data: uma } = await sb.rpc('minha_pastoral');
+    pastorais = typeof uma === 'string' && uma ? [uma] : [];
+  }
+  sessao = { user, solicitante, admin: !!admin, pastorais, pastoral: pastorais[0] || null };
   return sessao;
 }
 
 export async function montarPagina(ativo) {
   await carregarSessao().catch(() => null);
-  const nome = sessao?.pastoral || sessao?.solicitante?.nome || sessao?.user?.email || '';
+  const nome = (sessao?.pastorais?.length === 1 && sessao.pastoral) || sessao?.solicitante?.nome || sessao?.pastoral || sessao?.user?.email || '';
   const conta = sessao
     ? `<span class="usuario" title="${esc(sessao.user.email)}"><span class="avatar">${esc(iniciais(nome))}</span>${esc(nome.split(' ')[0])}</span>
        <a href="${raiz}/entrar.html?alterar=1" class="${ativo === 'senha' ? 'ativo' : ''}">Alterar senha</a>
@@ -174,6 +180,10 @@ export function escolherPerfil() {
 // Faixa "Acesso: ..." (sem troca; para mudar, é preciso sair e entrar de novo)
 export function faixaPerfil(el) {
   const p = perfilAtual();
-  if (sessao?.pastoral) { el.innerHTML = `<span class="faixa-perfil">Pastoral: <b>${esc(sessao.pastoral)}</b></span>`; return; }
+  const lista = sessao?.pastorais || [];
+  if (lista.length) {
+    el.innerHTML = `<span class="faixa-perfil">${lista.length > 1 ? 'Pastorais' : 'Pastoral'}: <b>${esc(lista.join(', '))}</b></span>`;
+    return;
+  }
   el.innerHTML = p ? `<span class="faixa-perfil">Acesso: <b>${nomePerfil(p)}</b></span>` : '';
 }

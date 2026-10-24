@@ -10,7 +10,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=26">
+<link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 <main class="pagina">
@@ -46,6 +46,12 @@
     <fieldset id="pd-tipos" class="dir-tipos">
       <legend class="campo"><span>Para quem é o atendimento <span class="obrig" aria-hidden="true">*</span></span></legend>
     </fieldset>
+    <div class="campo" id="pd-campo-pastoral" hidden>
+      <label for="pd-pastoral"><span>Pastoral, Movimento ou Grupo que participa <span class="obrig" aria-hidden="true">*</span></span></label>
+      <input type="text" id="pd-pastoral" name="pastoral" list="pd-lista-pastorais" maxlength="80" autocomplete="off" placeholder="Comece a digitar e escolha na lista">
+      <datalist id="pd-lista-pastorais"></datalist>
+      <label class="marcar"><input type="checkbox" name="sem_pastoral" id="pd-sem-pastoral">Não participo de pastoral</label>
+    </div>
     <label class="campo"><span>Nome <span class="obrig" aria-hidden="true">*</span></span>
       <input type="text" name="nome" autocomplete="name" maxlength="80" required>
     </label>

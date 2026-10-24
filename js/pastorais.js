@@ -2,6 +2,7 @@
 // de pastorais, movimentos e grupos (incluir, alterar e excluir).
 import { sb, limparErro } from './api.js';
 import { esc, dataCurta, linkWhatsApp } from './util.js';
+import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
 const COORD_VAZIO = () => ({ nome: '', telefone: '', email: '' });
@@ -11,6 +12,7 @@ let pastorais = [];
 let editando = null;            // id da pastoral em edição (null = nova)
 let coords = [], reunioes = [];
 let ligado = false;
+let atualizadaEm = '';
 
 function aviso(tipo, texto) {
   const el = $('msg');
@@ -36,6 +38,7 @@ export async function carregarPastorais() {
   }
   pastorais = (data || []).sort((a, b) => (a.numero ?? 9999) - (b.numero ?? 9999) || a.nome.localeCompare(b.nome, 'pt-BR'));
   const atualizada = cfg?.[0]?.valor;
+  atualizadaEm = atualizada ? dataCurta(atualizada) : '';
   $('pa-resumo').textContent = `${pastorais.length} ${pastorais.length === 1 ? 'pastoral, movimento ou grupo' : 'pastorais, movimentos e grupos'}`
     + (atualizada ? ` · Atualizada em ${dataCurta(atualizada)}` : '');
   desenhar();
@@ -65,6 +68,24 @@ function desenhar() {
   }));
 }
 
+// Outras pastorais que usam o mesmo login (mesma conta, mesma senha)
+function outrasDoLogin(p, email) {
+  const e = (email ?? p?.login_email ?? '').trim().toLowerCase();
+  if (!e) return [];
+  return pastorais.filter((x) => x.id !== p?.id && (x.login_email || '').toLowerCase() === e).map((x) => x.nome);
+}
+
+function avisoLoginCompartilhado() {
+  const f = $('f-pastoral');
+  const atual = pastorais.find((x) => x.id === editando) || null;
+  const outras = outrasDoLogin(atual || { id: null }, f.login_email.value);
+  const el = $('pa-login-aviso');
+  el.hidden = !outras.length;
+  el.textContent = outras.length
+    ? `Este login também é usado por: ${outras.join(', ')}. A senha é a mesma para todas: ao alterar aqui, ela muda em todas.`
+    : '';
+}
+
 function cartao(p) {
   const co = p.coordenadores || [];
   const re = p.reunioes || [];
@@ -92,6 +113,7 @@ function cartao(p) {
         <span class="pa-rot">Acesso ao sistema</span>
         ${p.user_id ? `
           <span><b>Login:</b> <span class="pa-email">${esc(p.login_email)}</span></span>
+          ${outrasDoLogin(p).length ? `<span class="nota">Mesmo login de: ${esc(outrasDoLogin(p).join(', '))}</span>` : ''}
           <span class="pa-senha-linha"><b>Senha:</b> <span class="pa-senha-valor" data-senha="${esc(p.senha_acesso || '')}">••••••••</span>
             <button type="button" class="btn btn-sec btn-peq" data-pa-mostrar aria-pressed="false">Mostrar</button></span>`
           : '<span class="etq etq-bloq" style="align-self:flex-start">Sem acesso</span>'}
@@ -116,6 +138,7 @@ function abrir(id) {
   f.login_email.value = p?.login_email || '';
   f.senha_acesso.value = p?.senha_acesso || '';
   verSenha(false);
+  avisoLoginCompartilhado();
   coords = (p?.coordenadores || []).map((c) => ({ ...COORD_VAZIO(), ...c }));
   reunioes = (p?.reunioes || []).map((r) => ({ ...REUNIAO_VAZIA(), ...r }));
   if (!coords.length) coords.push(COORD_VAZIO());
@@ -183,6 +206,10 @@ async function salvar(e) {
   if (login || senha) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(login)) return erro('Informe um e-mail válido para o login.');
     if (senha.length < 6) return erro('A senha de acesso precisa ter pelo menos 6 caracteres.');
+    const outras = outrasDoLogin(atual || { id: null }, login);
+    const senhaOutras = outras.length && pastorais.find((x) => x.id !== atual?.id && (x.login_email || '').toLowerCase() === login)?.senha_acesso;
+    if (outras.length && senhaOutras && senhaOutras !== senha
+        && !confirm(`Este login também é usado por: ${outras.join(', ')}. A senha nova passa a valer para todas. Continuar?`)) return;
   } else if (atual?.user_id && !confirm(`Login e senha em branco: o acesso de "${atual.nome}" ao sistema será removido. Continuar?`)) {
     return;
   }
@@ -221,7 +248,10 @@ async function salvar(e) {
 
 async function removerAcesso(id) {
   const p = pastorais.find((x) => x.id === id);
-  if (!p || !confirm(`Remover o acesso de "${p.nome}"? O login ${p.login_email} deixa de funcionar e quem estiver conectado sai. As reservas já feitas continuam.`)) return;
+  const outras = outrasDoLogin(p);
+  if (!p || !confirm(outras.length
+    ? `Remover o acesso de "${p.nome}"? O login ${p.login_email} continua valendo para: ${outras.join(', ')}. As reservas já feitas continuam.`
+    : `Remover o acesso de "${p.nome}"? O login ${p.login_email} deixa de funcionar e quem estiver conectado sai. As reservas já feitas continuam.`)) return;
   const { error } = await sb.rpc('remover_acesso_pastoral', { p_pastoral: id });
   if (error) return aviso('erro', limparErro(error));
   aviso('ok', `${p.nome}: acesso removido.`);
@@ -244,10 +274,48 @@ async function excluir(id) {
   await carregarPastorais();
 }
 
+// ---------------------------------------------------------------- baixar relação (sem login e senha)
+const num = (p) => (p.numero != null ? String(p.numero).padStart(2, '0') : '');
+const textoReuniao = (r) => [r.observacao, r.dia, r.horario, r.local].filter(Boolean).join(' · ');
+
+async function baixarRelacao(formato) {
+  const lista = pastorais;   // sempre a lista completa
+  const sub = `${lista.length} pastorais, movimentos e grupos${atualizadaEm ? ` · Atualizada em ${atualizadaEm}` : ''}`;
+  if (formato === 'pdf') {
+    return baixarPDF({
+      arquivo: `pastorais-movimentos-grupos-${hojeArquivo()}`,
+      titulo: 'Pastorais, Movimentos e Grupos',
+      subtitulo: sub,
+      secoes: [{
+        colunas: ['Nº', 'Pastoral / Movimento / Grupo', 'Coordenadores', 'Telefone', 'E-mail', 'Reuniões', 'Observação'],
+        larguras: { 0: 10, 1: 40, 2: 40, 3: 30, 4: 55, 5: 60 },
+        linhas: lista.map((p) => {
+          const co = p.coordenadores || [];
+          return [num(p), p.nome, co.map((c) => c.nome).join('\n'), co.map((c) => c.telefone || '—').join('\n'),
+            co.map((c) => c.email || '—').join('\n'), (p.reunioes || []).map(textoReuniao).join('\n'), p.observacao || ''];
+        }),
+      }],
+    });
+  }
+  // Excel: uma linha por coordenador, para filtrar e ordenar
+  const linhas = [];
+  lista.forEach((p) => {
+    const reunioes = (p.reunioes || []).map(textoReuniao).join('; ');
+    const co = (p.coordenadores || []).length ? p.coordenadores : [{}];
+    co.forEach((c) => linhas.push([p.numero ?? '', p.nome, c.nome || '', c.telefone || '', c.email || '', reunioes, p.observacao || '']));
+  });
+  return baixarExcel({
+    arquivo: `pastorais-movimentos-grupos-${hojeArquivo()}`,
+    abas: [{ nome: 'Pastorais', colunas: ['Nº', 'Pastoral / Movimento / Grupo', 'Coordenador', 'Telefone', 'E-mail', 'Reuniões', 'Observação'],
+      larguras: [6, 32, 30, 26, 34, 60, 30], linhas }],
+  });
+}
+
 function ligar() {
   if (ligado) return;
   ligado = true;
   $('pa-nova').addEventListener('click', () => abrir(null));
+  $('pa-baixar').addEventListener('click', () => escolherFormato('Baixar relação de pastorais', baixarRelacao));
   $('pa-busca').addEventListener('input', desenhar);
   $('pa-add-coord').addEventListener('click', () => {
     coords.push(COORD_VAZIO());
@@ -260,6 +328,13 @@ function ligar() {
     $('pa-reunioes').querySelector('li:last-child input')?.focus();
   });
   $('f-pastoral').addEventListener('submit', salvar);
+  $('f-pastoral').login_email.addEventListener('input', avisoLoginCompartilhado);
+  $('f-pastoral').login_email.addEventListener('change', () => {
+    // Login já usado por outra pastoral: traz a senha dessa conta
+    const e = $('f-pastoral').login_email.value.trim().toLowerCase();
+    const outra = pastorais.find((x) => x.id !== editando && (x.login_email || '').toLowerCase() === e && x.senha_acesso);
+    if (outra && !$('f-pastoral').senha_acesso.value) $('f-pastoral').senha_acesso.value = outra.senha_acesso;
+  });
   $('pa-ver-senha').addEventListener('click', () => verSenha($('pa-ver-senha').getAttribute('aria-pressed') !== 'true'));
   document.querySelector('[data-fechar-pastoral]').addEventListener('click', () => $('dlg-pastoral').close());
 }

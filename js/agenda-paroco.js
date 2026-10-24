@@ -1,4 +1,4 @@
-// Direcionamento Espiritual: agenda semanal do Pároco, dentro da Área de Gestão.
+// Direcionamento Espiritual: agenda mensal do Pároco, dentro da Área de Gestão.
 // Os elementos da página têm o prefixo "at-" (ex.: at-dias, at-msg).
 import { sb, limparErro } from './api.js';
 import {
@@ -12,7 +12,7 @@ const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'E
 
 let usuario = null;
 let ehSecretaria = false;
-let inicioSemana = segundaDe(hojeISO());
+let inicioMes = primeiroDoMes(hojeISO());
 let horarios = [];
 let atendimentos = [];
 let pendentes = [];        // pedidos aguardando confirmação (todas as datas futuras)
@@ -20,9 +20,15 @@ let bloqueios = [];
 let slotAtual = null;
 
 // ---------------------------------------------------------------- utilidades
-function segundaDe(iso) {
-  const dow = diaSemana(iso);            // 0 = domingo
-  return somaDias(iso, dow === 0 ? -6 : 1 - dow);
+function primeiroDoMes(iso) { return `${iso.slice(0, 7)}-01`; }
+function ultimoDoMes(iso) {
+  const [a, m] = iso.split('-').map(Number);
+  return `${iso.slice(0, 7)}-${String(new Date(Date.UTC(a, m, 0)).getUTCDate()).padStart(2, '0')}`;
+}
+function outroMes(iso, n) {
+  const [a, m] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(a, m - 1 + n, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
 }
 const hm = (t) => (t || '').slice(0, 5); // '16:00:00' -> '16:00'
 function somaMin(t, min) {
@@ -96,8 +102,8 @@ async function carregarHorarios() {
 }
 
 async function carregarSemana() {
-  const ini = inicioSemana;
-  const fim = somaDias(ini, 6);
+  const ini = inicioMes;
+  const fim = ultimoDoMes(ini);
   const [{ data: a, error: e1 }, { data: b, error: e2 }, { data: p, error: e3 }] = await Promise.all([
     sb.from('atendimentos').select('*').gte('data', ini).lte('data', fim)
       .in('status', ['agendado', 'pendente', 'solicitado', 'realizado']).order('data').order('inicio'),
@@ -128,6 +134,7 @@ function desenharPendentes() {
         </div>
         <b>${esc(dataLonga(a.data))} · ${esc(hora(hm(a.inicio) + ':00'))}</b>
         <span><b>${esc(a.nome)}</b></span>
+        ${a.pastoral ? `<span class="nota"><b>Pastoral:</b> ${esc(a.pastoral)}</span>` : ''}
         <span class="nota"><a href="${linkWhatsApp(a.telefone, '')}" target="_blank" rel="noopener">${esc(a.telefone)}</a></span>
         ${a.local_atendimento ? `<span class="nota"><b>Local:</b> ${esc(a.local_atendimento)}</span>` : ''}
         ${a.endereco ? `<span class="nota"><b>${a.tipo === 'enfermo' ? 'Residência' : 'Endereço'}:</b> ${esc(a.endereco)}</span>` : ''}
@@ -147,16 +154,13 @@ function desenharPendentes() {
 
 // ---------------------------------------------------------------- agenda
 function desenhar() {
-  const fim = somaDias(inicioSemana, 6);
-  const [, m1, d1] = inicioSemana.split('-').map(Number);
-  const [a2, m2, d2] = fim.split('-').map(Number);
-  $('sem-titulo').textContent = m1 === m2
-    ? `${d1} a ${d2} de ${MESES[m2 - 1]} de ${a2}`
-    : `${d1} de ${MESES[m1 - 1]} a ${d2} de ${MESES[m2 - 1]} de ${a2}`;
+  const fim = ultimoDoMes(inicioMes);
+  const [a1, m1] = inicioMes.split('-').map(Number);
+  const nomeMes = MESES[m1 - 1];
+  $('sem-titulo').textContent = `${nomeMes[0].toUpperCase()}${nomeMes.slice(1)} de ${a1}`;
 
   const dias = [];
-  for (let i = 0; i < 7; i++) {
-    const data = somaDias(inicioSemana, i);
+  for (let data = inicioMes; data <= fim; data = somaDias(data, 1)) {
     const slots = slotsDoDia(data);
     // atendimentos fora da grade atual (grade mudou depois) também aparecem
     atendimentos.filter((x) => x.data === data && !slots.some((s) => s.inicio === hm(x.inicio)))
@@ -182,7 +186,7 @@ function desenhar() {
         </div>
         <ul class="slots">${slots.map((s) => slotHtml(s)).join('')}</ul>
       </article>`;
-  }).join('') || '<div class="vazio">Não há horários de atendimento nesta semana.</div>';
+  }).join('') || '<div class="vazio">Não há horários de atendimento neste mês.</div>';
 
   $('dias').querySelectorAll('[data-acao]').forEach((b) => b.addEventListener('click', () => acao(b.dataset.acao, b.dataset)));
 }
@@ -218,6 +222,7 @@ function slotHtml(s) {
             ${a.status === 'realizado' ? '<span class="etq etq-ok">Realizado</span>' : ''}
           </span>
           ${extra}
+          ${a.pastoral ? `<span class="nota"><b>Pastoral:</b> ${esc(a.pastoral)}</span>` : ''}
           ${a.local_atendimento ? `<span class="nota"><b>Local:</b> ${esc(a.local_atendimento)}</span>` : ''}
           ${a.endereco ? `<span class="nota">${a.tipo === 'enfermo' ? '<b>Residência:</b> ' : ''}${esc(a.endereco)}</span>` : ''}
           ${a.assunto ? `<span class="nota">${esc(a.assunto)}</span>` : ''}
@@ -507,15 +512,18 @@ export async function abrirAgendaParoco({ user, secretaria }) {
     ligarBloquear();
     ligarHorarios();
     document.querySelectorAll('dialog[id^="at-"] [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
-    $('sem-ant').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, -7); carregarSemana(); });
-    $('sem-prox').addEventListener('click', () => { inicioSemana = somaDias(inicioSemana, 7); carregarSemana(); });
-    $('sem-hoje').addEventListener('click', () => { inicioSemana = segundaDe(hojeISO()); carregarSemana(); });
+    $('sem-ant').addEventListener('click', () => { inicioMes = outroMes(inicioMes, -1); carregarSemana(); });
+    $('sem-prox').addEventListener('click', () => { inicioMes = outroMes(inicioMes, 1); carregarSemana(); });
+    $('sem-hoje').addEventListener('click', () => { inicioMes = primeiroDoMes(hojeISO()); carregarSemana(); });
     $('bt-bloquear').addEventListener('click', () => abrirBloquear());
     $('bt-horarios').addEventListener('click', abrirHorarios);
     await carregarHorarios();
-    // Se os atendimentos desta semana já passaram, abre direto a próxima
-    const semFuturo = [0, 1, 2, 3, 4, 5, 6].every((i) => slotsDoDia(somaDias(inicioSemana, i)).every((s) => passou(s.data, s.fim)));
-    if (semFuturo && horarios.some((h) => h.ativo)) inicioSemana = somaDias(inicioSemana, 7);
+    // Se os atendimentos deste mês já passaram, abre direto o próximo
+    let semFuturo = true;
+    for (let d = hojeISO(); d <= ultimoDoMes(inicioMes); d = somaDias(d, 1)) {
+      if (slotsDoDia(d).some((x) => !passou(x.data, x.fim))) { semFuturo = false; break; }
+    }
+    if (semFuturo && horarios.some((h) => h.ativo)) inicioMes = outroMes(inicioMes, 1);
   }
   await carregarSemana();
 }

@@ -1,5 +1,5 @@
 // Entrar (login criado pela secretaria), alterar senha e recuperação de senha
-import { sb, limparErro, alterarMinhaSenha } from '../api.js';
+import { sb, limparErro, alterarMinhaSenha, carregarConfig } from '../api.js';
 import { montarPagina, mostrarAviso, sessao } from '../ui.js';
 import { param } from '../util.js';
 
@@ -7,6 +7,8 @@ const $ = (id) => document.getElementById(id);
 const msg = $('msg');
 const volta = param('volta');
 let recuperando = false;
+let tel = '(61) 3354-2921';
+carregarConfig().then((c) => { if (c.telefone_secretaria) tel = c.telefone_secretaria; }).catch(() => {});
 
 function destino() {
   // Só aceita voltar para páginas do próprio site
@@ -63,10 +65,10 @@ async function iniciar() {
 
   $('esqueci').addEventListener('click', async () => {
     const email = $('f-entrar').email.value.trim();
-    if (!email) return mostrarAviso(msg, 'erro', 'Digite o e-mail de acesso no campo acima e toque de novo em "Esqueci minha senha". Se o e-mail não chegar, peça a senha à secretaria paroquial.');
+    if (!email) return mostrarAviso(msg, 'erro', `Digite o e-mail de acesso no campo acima e toque de novo em "Esqueci minha senha". Se o e-mail não chegar, peça a senha à secretaria paroquial ${tel}.`);
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
     if (error) return mostrarAviso(msg, 'erro', limparErro(error));
-    mostrarAviso(msg, 'ok', 'Enviamos um link para criar uma nova senha. Confira o e-mail. Se não chegar, peça a senha à secretaria paroquial.');
+    mostrarAviso(msg, 'ok', `Enviamos um link para criar uma nova senha. Confira o e-mail. Se não chegar, peça a senha à secretaria paroquial ${tel}.`);
   });
 
 }

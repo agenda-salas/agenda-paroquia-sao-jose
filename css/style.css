@@ -516,3 +516,5 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
 .perfil-det { font-size: 12.5px; font-weight: 600; color: var(--texto-3); }
 .comp-link-secreto { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; }
 .comp-link-secreto > span { flex: 1 1 260px; }
+.bx-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .bx-opcoes { grid-template-columns: 1fr; } }

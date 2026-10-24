@@ -13,11 +13,13 @@ let usarLista = false;                                        // paroquiano esco
 const alterando = (param('alterar') || '').toUpperCase();   // código da reserva que está sendo alterada
 let antigas = [];                                             // turnos ativos da reserva antiga
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
-const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes do horário agendado, faça contato com a secretaria paroquial em horário comercial.';
+const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes do horário agendado, faça contato com a secretaria paroquial pelo telefone (61) 3354-2921, em horário comercial.';
 
-// Conta de pastoral: o grupo é sempre o nome da pastoral (não muda)
-const grupoFixo = () => (sessao && !sessao.admin && sessao.pastoral) || null;
-const ehExterno = () => !grupoFixo() && perfilAtual() === 'externo';
+// Conta de pastoral: o grupo é sempre uma das pastorais deste login
+const minhas = () => (sessao && !sessao.admin && sessao.pastorais) || [];
+const grupoFixo = () => (minhas().length === 1 ? minhas()[0] : null);
+const variasPastorais = () => minhas().length > 1;
+const ehExterno = () => !minhas().length && perfilAtual() === 'externo';
 
 // Mostra ou esconde os campos de quem é de outra paróquia
 function aplicarPerfil() {
@@ -26,7 +28,16 @@ function aplicarPerfil() {
   const externo = ehExterno();
   // Pastoral com login: grupo fixo. Secretaria: lista de pastorais. Não paroquiano: digita o grupo.
   const fixo = grupoFixo();
-  const lista = usarLista && !externo && !fixo;
+  // Login de várias pastorais: escolhe em nome de qual reservar
+  if (variasPastorais() && !f.grupo_lista.dataset.minhas) {
+    f.grupo_lista.innerHTML = '<option value="">Escolha a pastoral</option>'
+      + minhas().map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    f.grupo_lista.dataset.minhas = '1';
+    $('campo-grupo-lista').querySelector('.nota').textContent = 'Este login é de mais de uma pastoral, movimento ou grupo. Escolha em nome de qual é a reserva.';
+    $('campo-grupo-lista').querySelector('span').firstChild.textContent = 'Em nome de qual pastoral ';
+    if (minhas().includes(sessao.solicitante?.grupo)) f.grupo_lista.value = sessao.solicitante.grupo;
+  }
+  const lista = (usarLista || variasPastorais()) && !externo && !fixo;
   $('campo-grupo-lista').hidden = !lista;
   $('campo-grupo-texto').hidden = lista;
   f.grupo_lista.required = lista;
@@ -97,7 +108,7 @@ async function iniciar() {
     if (!sala) { $('resumo').textContent = 'Sala não encontrada.'; return; }
     $('resumo').textContent = `${nomeSala(sala)} (${sala.capacidade} pessoas) · ${dataLonga(data)}`;
     $('lista-grupos').innerHTML = grupos.map((g) => `<option value="${esc(g)}"></option>`).join('');
-    if (nomes.length) {
+    if (nomes.length && !variasPastorais()) {
       usarLista = true;
       const ordem = [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
       f.grupo_lista.innerHTML = '<option value="">Selecione na lista</option>'
@@ -154,9 +165,9 @@ async function iniciar() {
     if (!f.nome.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o nome do responsável.');
     if (soDigitos(f.telefone.value).length < 10) return mostrarAviso($('msg'), 'erro', 'Informe o telefone com DDD.');
     const externo = ehExterno();
-    const daLista = usarLista && !externo && !grupoFixo();
+    const daLista = (usarLista || variasPastorais()) && !externo && !grupoFixo();
     const grupo = grupoFixo() || (daLista ? f.grupo_lista.value : f.grupo.value.trim());
-    if (!grupo) return mostrarAviso($('msg'), 'erro', daLista ? 'Selecione a sua pastoral, grupo ou movimento na lista.' : 'Informe a pastoral ou o grupo.');
+    if (!grupo) return mostrarAviso($('msg'), 'erro', variasPastorais() ? 'Escolha em nome de qual pastoral, movimento ou grupo é a reserva.' : daLista ? 'Selecione a sua pastoral, grupo ou movimento na lista.' : 'Informe a pastoral ou o grupo.');
     if (externo) {
       if (!f.endereco.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe o endereço.');
       if (!f.paroquia.value.trim()) return mostrarAviso($('msg'), 'erro', 'Informe a paróquia em que atua.');
@@ -176,6 +187,7 @@ async function iniciar() {
           salaId, data, turnos, nome: f.nome.value.trim(), telefone: f.telefone.value.trim(), grupo,
           motivo: f.motivo.value.trim(), endereco: f.endereco.value.trim(), paroquia: f.paroquia.value.trim(), paroco: f.paroco.value.trim(),
         });
+        try { sessionStorage.setItem(`zap:${token}`, f.telefone.value.trim()); } catch {}   // para "Enviar para o meu WhatsApp"
         location.href = `comprovante.html?t=${encodeURIComponent(token)}&novo=1`;
         return;
       }

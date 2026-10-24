@@ -24,7 +24,7 @@ export function textoComprovante(linhas) {
     `Responsável: ${r.responsavel}`,
     ...((r.itens || []).length ? ['', TEXTO_ITENS, ...r.itens.map((i) => `• ${i.descricao}${i.quantidade ? `: ${i.quantidade}` : ''}`)] : []),
     '',
-    'Confira a situação atual:',
+    r.status === 'pendente' ? 'Acompanhe a aprovação da secretaria:' : 'Confira a situação atual:',
   ].join('\n');
 }
 

@@ -1,6 +1,6 @@
 // Direcionamento Espiritual: a pessoa vê os horários livres e pede um horário.
 // O pedido fica aguardando a confirmação da secretaria ou do Pároco. Não precisa de login.
-import { sb, limparErro } from '../api.js';
+import { sb, limparErro, nomesPastorais, carregarConfig } from '../api.js';
 import { montarPagina, sessao } from '../ui.js';
 import {
   esc, hojeISO, somaDias, diaSemana, dataLonga, dataCurta, hora, agoraSP,
@@ -50,6 +50,10 @@ const PUBLICO = { paroquianos: 'Paroquianos', enfermos: 'Enfermos' };
 const TIPO = { paroquiano: 'Paroquiano', externo: 'Não paroquiano', enfermo: 'Enfermo' };
 
 let horarios = [], ocupados = [], bloqueios = [];
+let pastorais = [];            // nomes do cadastro (sugestões e conferência)
+let telSecretaria = '(61) 3354-2921';
+const comparavel = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+const pastoralOficial = (t) => pastorais.find((n) => comparavel(n) === comparavel(t)) || null;
 let slotAtual = null;
 
 const hm = (t) => (t || '').slice(0, 5);
@@ -171,6 +175,10 @@ function ajustar() {
   f.paroco.required = externo;
   $('pd-rotulo-end').textContent = enfermo ? 'Endereço residencial do enfermo' : 'Endereço';
   $('pd-campo-local').hidden = !enfermo;
+  // Paroquiano informa a pastoral, movimento ou grupo (ou marca que não participa)
+  const paroquiano = tipo === 'paroquiano';
+  $('pd-campo-pastoral').hidden = !paroquiano;
+  f.pastoral.disabled = !paroquiano || f.sem_pastoral.checked;
   f.local.required = enfermo;
   $('pd-rotulo-assunto').textContent = enfermo ? 'Observações (estado do enfermo, ponto de referência)' : 'Assunto (opcional)';
   $('pd-regra').textContent = externo
@@ -184,6 +192,10 @@ function ligarPedido() {
   const f = $('f-pedir');
   mascaraTelefone(f.telefone);
   mascaraEndereco(f.endereco);
+  f.sem_pastoral.addEventListener('change', () => {
+    f.pastoral.disabled = f.sem_pastoral.checked;
+    if (f.sem_pastoral.checked) f.pastoral.value = '';
+  });
   f.addEventListener('input', () => { $('pd-erro').hidden = true; });   // ao corrigir, o aviso some
   const erro = (t) => { $('pd-erro').textContent = t; $('pd-erro').hidden = false; };
   f.addEventListener('submit', async (e) => {
@@ -198,6 +210,17 @@ function ligarPedido() {
     if (sit === 'fora') return erro(MSG_AREA);
     if (sit === 'incompleto') return erro(MSG_INCOMPLETO);
     if (tipo === 'enfermo' && !f.local.value.trim()) return erro('Informe o local onde o enfermo se encontra.');
+    let pastoral = null;
+    if (tipo === 'paroquiano') {
+      if (f.sem_pastoral.checked) pastoral = '__nenhuma__';
+      else {
+        if (!f.pastoral.value.trim()) return erro('Informe a Pastoral, Movimento ou Grupo de que participa, ou marque "Não participo de pastoral".');
+        pastoral = pastoralOficial(f.pastoral.value);
+        if (!pastoral && pastorais.length) return erro(`Pastoral, Movimento ou Grupo - INVÁLIDO. Digite corretamente o nome ou entre em contato com a secretaria Paroquial ${telSecretaria}`);
+        pastoral = pastoral || f.pastoral.value.trim();
+        f.pastoral.value = pastoral;
+      }
+    }
     if (tipo === 'externo' && !f.paroquia.value.trim()) return erro('Informe a paróquia em que atua.');
     if (tipo === 'externo' && !f.paroco.value.trim()) return erro('Informe o nome do pároco responsável.');
     const bt = $('pd-enviar');
@@ -209,13 +232,14 @@ function ligarPedido() {
       p_assunto: f.assunto.value.trim() || null, p_endereco: f.endereco.value.trim(),
       p_paroquia: f.paroquia.value.trim() || null, p_paroco: f.paroco.value.trim() || null,
       p_local: tipo === 'enfermo' ? f.local.value.trim() : null,
+      p_pastoral: pastoral,
     });
     bt.disabled = false;
     bt.textContent = 'Enviar pedido';
     if (error) return erro(limparErro(error));
     $('dlg-pedir').close();
     aviso('ok', `Pedido enviado para ${dataLonga(slotAtual.data).toLowerCase()}, às ${hh(slotAtual.inicio)}. `
-      + 'A secretaria ou o Pároco confirma e avisa você pelo WhatsApp. Para cancelar, fale com a secretaria paroquial.');
+      + `A secretaria ou o Pároco confirma e avisa você pelo WhatsApp. Para cancelar, fale com a secretaria paroquial ${telSecretaria}.`);
     await carregar();
   });
   document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
@@ -225,6 +249,12 @@ function ligarPedido() {
 async function iniciar() {
   await montarPagina('direcionamento');
   ligarPedido();
+  // Lista de pastorais (sugestões) e telefone da secretaria
+  nomesPastorais().then((n) => {
+    pastorais = [...n].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    $('pd-lista-pastorais').innerHTML = pastorais.map((x) => `<option value="${esc(x)}"></option>`).join('');
+  }).catch(() => {});
+  carregarConfig().then((c) => { if (c.telefone_secretaria) telSecretaria = c.telefone_secretaria; }).catch(() => {});
   try {
     await carregar();
   } catch (e) {

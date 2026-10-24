@@ -4,6 +4,7 @@ import { esc, hojeISO, somaDias, dataLonga, dataCurta, faixa, linkWhatsApp, prim
 import { linkComprovante } from './comprovante.js';
 import { abrirAgendaParoco } from './agenda-paroco.js';
 import { carregarPastorais } from './pastorais.js';
+import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
 const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais'];
@@ -201,7 +202,7 @@ function preencherSelects() {
 async function carregarAprovacoes() {
   await sb.rpc('expirar_pendentes');
   const { data, error } = await sb.from('reservas')
-    .select('codigo, data, motivo, criado_em, grupo, responsavel_nome, responsavel_telefone, sala_id, turno_id, tipo, endereco, paroquia_origem, paroco_responsavel')
+    .select('codigo, data, motivo, criado_em, grupo, responsavel_nome, responsavel_telefone, sala_id, turno_id, tipo, endereco, paroquia_origem, paroco_responsavel, token')
     .eq('status', 'pendente').order('data').order('criado_em');
   if (error) throw error;
   const pedidos = agrupar(data);
@@ -253,10 +254,14 @@ async function decidir(p, aprovar, motivo) {
   const { error } = await sb.rpc('decidir_reserva', { p_codigo: p.codigo, p_aprovar: aprovar, p_motivo: motivo || null });
   if (error) return aviso('erro', limparErro(error));
   const nome = primeiroNome(p.responsavel_nome);
+  const link = linkComprovante(p.codigo, p.token);   // pedido sem login: link secreto
+  const { data: cfgTel } = await sb.from('configuracoes').select('valor').eq('chave', 'telefone_secretaria').maybeSingle();
+  const tel = cfgTel?.valor || '';
   const texto = aprovar
-    ? `Olá, ${nome}! Sua reserva ${p.codigo} (${resumoPedido(p)}) foi APROVADA pela secretaria da Paróquia São José. Comprovante: ${linkComprovante(p.codigo)}`
-    : `Olá, ${nome}! Sua reserva ${p.codigo} (${resumoPedido(p)}) não pôde ser aprovada. Motivo: ${motivo}. Em caso de dúvida, fale com a secretaria.`;
-  aviso('ok', aprovar ? `Pedido ${p.codigo} aprovado.` : `Pedido ${p.codigo} recusado e turno liberado.`, linkAvisar(p, texto));
+    ? `Olá, ${nome}! Sua reserva ${p.codigo} (${resumoPedido(p)}) foi APROVADA pela secretaria da Paróquia São José. Comprovante: ${link}`
+    : `Olá, ${nome}! Sua reserva ${p.codigo} (${resumoPedido(p)}) não pôde ser aprovada. Motivo: ${motivo}. Comprovante: ${link}. Em caso de dúvida, fale com a secretaria paroquial ${tel}.`;
+  aviso('ok', aprovar ? `Pedido ${p.codigo} aprovado.` : `Pedido ${p.codigo} recusado e turno liberado.`,
+    `<a class="btn btn-peq" href="${linkWhatsApp(p.responsavel_telefone, texto)}" target="_blank" rel="noopener">Avisar pelo WhatsApp</a>`);
   await carregarAprovacoes();
 }
 
@@ -456,6 +461,49 @@ async function mostrarAfetadas(ids, de, ate, marcados, motivo) {
 }
 
 // ---------------------------------------------------------------- salas
+// ---------------------------------------------------------------- baixar itens por sala (com totais)
+async function baixarItensSalas(formato) {
+  const lista = salas.filter((x) => !x.excluida_em);
+  const tipo = (x) => (x.tipo === 'palestra' ? 'Sala de palestra' : 'Sala comum');
+  const qtd = (i) => (Number(i.quantidade) > 0 ? Number(i.quantidade) : 1);   // item sem quantidade conta 1
+  // Totais por item (mesmo nome, sem diferenciar maiúsculas e acentos)
+  const chave = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const totais = new Map();
+  lista.forEach((x) => (x.itens || []).forEach((i) => {
+    const k = chave(i.descricao);
+    const t = totais.get(k) || { nome: i.descricao, total: 0, salas: 0 };
+    t.total += qtd(i);
+    t.salas += 1;
+    totais.set(k, t);
+  }));
+  const linhasTotais = [...totais.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((t) => [t.nome, t.total, t.salas]);
+  const linhasItens = [];
+  lista.forEach((x) => {
+    const sit = x.ativa ? 'Ativa' : 'Desativada';
+    if (!(x.itens || []).length) linhasItens.push([nomeSala(x), x.capacidade, tipo(x), sit, 'Sem itens cadastrados', '']);
+    (x.itens || []).forEach((i) => linhasItens.push([nomeSala(x), x.capacidade, tipo(x), sit, i.descricao, i.quantidade ?? '']));
+  });
+  const arquivo = `itens-das-salas-${hojeArquivo()}`;
+  if (formato === 'pdf') {
+    return baixarPDF({
+      arquivo, deitado: false,
+      titulo: 'Itens das salas',
+      subtitulo: `${lista.length} salas · gerado em ${new Date().toLocaleDateString('pt-BR')}`,
+      secoes: [
+        { titulo: 'Itens por sala', colunas: ['Sala', 'Capacidade', 'Tipo', 'Situação', 'Item', 'Qtd.'], linhas: linhasItens },
+        { titulo: 'Total geral por item', colunas: ['Item', 'Total', 'Nº de salas com o item'], linhas: linhasTotais },
+      ],
+    });
+  }
+  return baixarExcel({
+    arquivo,
+    abas: [
+      { nome: 'Itens por sala', colunas: ['Sala', 'Capacidade', 'Tipo', 'Situação', 'Item', 'Quantidade'], larguras: [24, 12, 18, 12, 30, 12], linhas: linhasItens },
+      { nome: 'Totais', colunas: ['Item', 'Total', 'Nº de salas com o item'], larguras: [30, 10, 22], linhas: linhasTotais },
+    ],
+  });
+}
+
 async function carregarSalas() {
   const { data, error } = await sb.from('salas').select('*').order('ordem').order('numero');
   if (error) throw error;
@@ -750,6 +798,7 @@ async function iniciar() {
   ligarLogin();
   ligarBloqueios();
   ligarSalas();
+  $('bt-baixar-itens').addEventListener('click', () => escolherFormato('Baixar itens das salas', baixarItensSalas));
   ligarItens();
   ligarConfig();
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
