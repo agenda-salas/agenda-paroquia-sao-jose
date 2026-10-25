@@ -25,8 +25,33 @@ export async function carregarSessao() {
   return sessao;
 }
 
+// Troca de opção pelo menu (?perfil=paroquiano | externo). Retorna false se a página vai mudar.
+async function aplicarTrocaDePerfil() {
+  const url = new URL(location.href);
+  const pedido = url.searchParams.get('perfil');
+  if (!pedido) return true;
+  url.searchParams.delete('perfil');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  if (pedido === 'paroquiano') {
+    guardarPerfil('paroquiano');
+    if (!sessao) {   // pastoral precisa do login
+      location.href = `${raiz}/entrar.html?volta=${encodeURIComponent(url.pathname + url.search)}`;
+      return false;
+    }
+  } else if (pedido === 'externo') {
+    if (sessao && !sessao.admin) {
+      if (!confirm('Para pedir como não paroquiano, é preciso sair da conta da pastoral. Sair agora?')) return true;
+      await sb.auth.signOut();
+      sessao = null;
+    }
+    guardarPerfil('externo');
+  }
+  return true;
+}
+
 export async function montarPagina(ativo) {
   await carregarSessao().catch(() => null);
+  if (!(await aplicarTrocaDePerfil())) return new Promise(() => {});   // indo para a tela de entrar
   const nome = (sessao?.pastorais?.length === 1 && sessao.pastoral) || sessao?.solicitante?.nome || sessao?.pastoral || sessao?.user?.email || '';
   const conta = sessao
     ? `<span class="usuario" title="${esc(sessao.user.email)}"><span class="avatar">${esc(iniciais(nome))}</span>${esc(nome.split(' ')[0])}</span>
@@ -48,7 +73,9 @@ export async function montarPagina(ativo) {
         </span>
       </a>
       <nav class="menu" aria-label="Principal">
-        <a href="${raiz}/index.html" class="${ativo === 'salas' ? 'ativo' : ''}">Salas</a>
+        <a href="${raiz}/index.html?perfil=paroquiano" class="menu-opcao ${ativo === 'salas' && perfilAtual() !== 'externo' ? 'ativo' : ''}">Pastorais</a>
+        <a href="${raiz}/index.html?perfil=externo" class="menu-opcao ${ativo === 'salas' && perfilAtual() === 'externo' ? 'ativo' : ''}">Não paroquiano</a>
+        <a href="${raiz}/direcionamento.html" class="menu-opcao ${ativo === 'direcionamento' ? 'ativo' : ''}">Direcionamento</a>
         ${sessao ? `<a href="${raiz}/minhas-reservas.html" class="${ativo === 'minhas' ? 'ativo' : ''}">Minhas reservas</a>` : ''}
         ${conta}
       </nav>
@@ -172,6 +199,8 @@ export function escolherPerfil() {
         return;
       }
       dlg.close();
+      // Atualiza o menu (opção marcada, Entrar/Sair) com a escolha feita
+      location.reload();
     }));
     dlg.showModal();
   });

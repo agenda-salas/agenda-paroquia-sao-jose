@@ -518,3 +518,10 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
 .comp-link-secreto > span { flex: 1 1 260px; }
 .bx-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 420px) { .bx-opcoes { grid-template-columns: 1fr; } }
+/* Menu: as três opções sempre disponíveis; a escolhida fica em verde */
+.menu a.menu-opcao.ativo { background: var(--azul); color: var(--branco); }
+.menu a.menu-opcao:hover { background: var(--azul); color: var(--branco); }
+@media (max-width: 640px) {
+  .menu { gap: 2px; }
+  .menu a, .menu button { padding-left: 9px; padding-right: 9px; }
+}
