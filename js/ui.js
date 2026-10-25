@@ -53,13 +53,25 @@ export async function montarPagina(ativo) {
   await carregarSessao().catch(() => null);
   if (!(await aplicarTrocaDePerfil())) return new Promise(() => {});   // indo para a tela de entrar
   const nome = (sessao?.pastorais?.length === 1 && sessao.pastoral) || sessao?.solicitante?.nome || sessao?.pastoral || sessao?.user?.email || '';
+  // Quem abre o Direcionamento sem ter escolhido conta como paroquiano
+  if (ativo === 'direcionamento' && !perfilAtual()) guardarPerfil('paroquiano');
+  const perfil = perfilAtual();
   const conta = sessao
     ? `<span class="usuario" title="${esc(sessao.user.email)}"><span class="avatar">${esc(iniciais(nome))}</span>${esc(nome.split(' ')[0])}</span>
        <a href="${raiz}/entrar.html?alterar=1" class="${ativo === 'senha' ? 'ativo' : ''}">Alterar senha</a>
        <button type="button" id="sair">Sair</button>`
-    : perfilAtual() === 'externo'
+    : perfil === 'externo'
       ? '<button type="button" id="sair">Sair</button>'   // não paroquiano (sem login): volta à escolha inicial
-      : `<a href="${raiz}/entrar.html?volta=${encodeURIComponent(location.pathname + location.search)}" class="btn-entrar">Entrar</a>`;
+      : `<a href="${raiz}/entrar.html?volta=${encodeURIComponent(location.pathname + location.search)}" class="btn-entrar">Entrar</a>`
+        + (perfil ? '<button type="button" id="sair">Sair</button>' : '');
+
+  // Opções do menu conforme a escolha: paroquiano vê Pastorais e Direcionamento; não paroquiano, só a sua
+  const opPastorais = `<a href="${raiz}/index.html?perfil=paroquiano" class="menu-opcao ${ativo === 'salas' && perfil !== 'externo' ? 'ativo' : ''}">Pastorais</a>`;
+  const opExterno = `<a href="${raiz}/index.html?perfil=externo" class="menu-opcao ${ativo === 'salas' && perfil === 'externo' ? 'ativo' : ''}">Não paroquiano</a>`;
+  const opDirecionamento = `<a href="${raiz}/direcionamento.html" class="menu-opcao ${ativo === 'direcionamento' ? 'ativo' : ''}">Direcionamento</a>`;
+  const opcoes = sessao?.admin ? opPastorais + opExterno + opDirecionamento
+    : perfil === 'externo' ? opExterno
+    : opPastorais + opDirecionamento;
 
   const topo = document.createElement('header');
   topo.className = 'topo';
@@ -73,9 +85,7 @@ export async function montarPagina(ativo) {
         </span>
       </a>
       <nav class="menu" aria-label="Principal">
-        <a href="${raiz}/index.html?perfil=paroquiano" class="menu-opcao ${ativo === 'salas' && perfilAtual() !== 'externo' ? 'ativo' : ''}">Pastorais</a>
-        <a href="${raiz}/index.html?perfil=externo" class="menu-opcao ${ativo === 'salas' && perfilAtual() === 'externo' ? 'ativo' : ''}">Não paroquiano</a>
-        <a href="${raiz}/direcionamento.html" class="menu-opcao ${ativo === 'direcionamento' ? 'ativo' : ''}">Direcionamento</a>
+        ${opcoes}
         ${sessao ? `<a href="${raiz}/minhas-reservas.html" class="${ativo === 'minhas' ? 'ativo' : ''}">Minhas reservas</a>` : ''}
         ${conta}
       </nav>
@@ -184,13 +194,15 @@ export function escolherPerfil() {
         <button type="button" class="perfil-opcao" data-perfil="externo">
           <span class="perfil-ic">${icone('externo')}</span><span class="perfil-tx"><b>Não sou Paroquiano</b><span class="perfil-det">Pedido sem login, com aprovação</span></span>
         </button>
-        <a class="perfil-opcao" href="${raiz}/direcionamento.html">
+        <a class="perfil-opcao" href="${raiz}/direcionamento.html" data-direcionamento>
           <span class="perfil-ic">${icone('direcionamento')}</span><span class="perfil-tx"><b>Direcionamento Espiritual</b><span class="perfil-det">Pedir horário com o Pároco</span></span>
         </a>
       </div>`;
     document.body.append(dlg);
     dlg.addEventListener('cancel', (e) => e.preventDefault());
     dlg.addEventListener('close', () => { dlg.remove(); resolve(perfilAtual()); });
+    // Direcionamento Espiritual conta como paroquiano
+    dlg.querySelector('[data-direcionamento]').addEventListener('click', () => guardarPerfil('paroquiano'));
     dlg.querySelectorAll('[data-perfil]').forEach((b) => b.addEventListener('click', () => {
       guardarPerfil(b.dataset.perfil);
       // Pastoral sem login: vai para a tela de entrar e volta para onde estava
