@@ -120,3 +120,72 @@ export function escolherFormato(titulo, gerar) {
 
 // "2026-10-24" para o nome do arquivo
 export const hojeArquivo = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+
+// Busca todas as linhas (o Supabase devolve no máximo 1000 por vez)
+export async function buscarTudo(montarConsulta) {
+  const todas = [];
+  for (let ini = 0; ; ini += 1000) {
+    const { data, error } = await montarConsulta().range(ini, ini + 999);
+    if (error) throw error;
+    todas.push(...(data || []));
+    if (!data || data.length < 1000) return todas;
+  }
+}
+
+const dataBR = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
+export { dataBR };
+
+// Janela de relatório: período (e, opcionalmente, solicitante) + PDF ou Excel
+// cfg: { titulo, nota, solicitantes?: async (de, ate) => [nomes], gerar: async (formato, { de, ate, solicitante }) }
+export function abrirRelatorio(cfg) {
+  const dlg = document.getElementById('dlg-relatorio');
+  const f = document.getElementById('f-relatorio');
+  const msg = document.getElementById('rl-msg');
+  const campoSolic = document.getElementById('rl-campo-solic');
+  document.getElementById('rl-titulo').textContent = cfg.titulo;
+  document.getElementById('rl-nota').textContent = cfg.nota || '';
+  msg.hidden = true;
+  const hoje = hojeArquivo();
+  if (!f.de.value) f.de.value = `${hoje.slice(0, 7)}-01`;
+  if (!f.ate.value) f.ate.value = hoje;
+  campoSolic.hidden = !cfg.solicitantes;
+
+  const atualizarSolicitantes = async () => {
+    if (!cfg.solicitantes || !f.de.value || !f.ate.value) return;
+    const atual = f.solicitante.value;
+    try {
+      const nomes = await cfg.solicitantes(f.de.value, f.ate.value);
+      f.solicitante.innerHTML = '<option value="">Todos os solicitantes</option>'
+        + nomes.map((n) => `<option>${n.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</option>`).join('');
+      if (nomes.includes(atual)) f.solicitante.value = atual;
+    } catch { /* a lista fica como está */ }
+  };
+  f.de.onchange = atualizarSolicitantes;
+  f.ate.onchange = atualizarSolicitantes;
+  atualizarSolicitantes();
+
+  dlg.querySelectorAll('[data-rl-formato]').forEach((b) => {
+    b.disabled = false;
+    b.onclick = async () => {
+      if (!f.de.value || !f.ate.value || f.ate.value < f.de.value) {
+        msg.className = 'aviso aviso-erro';
+        msg.textContent = 'Informe o período: a data final precisa ser igual ou depois da inicial.';
+        msg.hidden = false;
+        return;
+      }
+      dlg.querySelectorAll('[data-rl-formato]').forEach((x) => { x.disabled = true; });
+      msg.className = 'aviso aviso-info';
+      msg.textContent = 'Gerando o arquivo…';
+      msg.hidden = false;
+      try {
+        await cfg.gerar(b.dataset.rlFormato, { de: f.de.value, ate: f.ate.value, solicitante: cfg.solicitantes ? f.solicitante.value : '' });
+        dlg.close();
+      } catch (e) {
+        msg.className = 'aviso aviso-erro';
+        msg.textContent = e.message || 'Não foi possível gerar o arquivo.';
+      }
+      dlg.querySelectorAll('[data-rl-formato]').forEach((x) => { x.disabled = false; });
+    };
+  });
+  dlg.showModal();
+}

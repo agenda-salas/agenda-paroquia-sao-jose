@@ -1,6 +1,7 @@
 // Direcionamento Espiritual: agenda mensal do Pároco, dentro da Área de Gestão.
 // Os elementos da página têm o prefixo "at-" (ex.: at-dias, at-msg).
 import { sb, limparErro } from './api.js';
+import { baixarPDF, baixarExcel, abrirRelatorio, buscarTudo, dataBR } from './exportar.js';
 import {
   esc, hojeISO, somaDias, diaSemana, dataLonga, dataCurta, hora, agoraSP,
   linkWhatsApp, primeiroNome, mascaraTelefone, soDigitos, DIAS_LONGOS, MESES,
@@ -503,9 +504,36 @@ function ligarHorarios() {
 let ligado = false;
 
 // Abre a agenda dentro da Área de Gestão (aba "Direcionamento Espiritual")
+// ---------------------------------------------------------------- relatório "Total de solicitações" (só secretaria)
+const AUTORIZADO = { agendado: 'Sim', realizado: 'Sim', cancelado: 'Não', pendente: 'Aguardando', solicitado: 'Aguardando' };
+
+async function gerarTotalSolicitacoes(formato, { de, ate }) {
+  const lista = await buscarTudo(() => sb.from('atendimentos')
+    .select('data, inicio, nome, pastoral, tipo, telefone, status')
+    .gte('data', de).lte('data', ate).order('data').order('inicio'));
+  const pastoral = (a) => a.pastoral || (a.tipo === 'enfermo' ? 'Enfermo' : '—');
+  const colunas = ['Data', 'Nome', 'Pastoral', 'Telefone', 'Autorizado'];
+  const corpo = lista.map((a) => [`${dataBR(a.data)} ${hm(a.inicio)}`, a.nome, pastoral(a), a.telefone, AUTORIZADO[a.status] || a.status]);
+  const conta = (v) => lista.filter((a) => AUTORIZADO[a.status] === v).length;
+  const resumo = `Total geral: ${lista.length} · Autorizados: ${conta('Sim')} · Não autorizados: ${conta('Não')} · Aguardando: ${conta('Aguardando')}`;
+  const arquivo = `total-de-solicitacoes-${de}-a-${ate}`;
+  if (formato === 'pdf') {
+    return baixarPDF({
+      arquivo, deitado: false, titulo: 'Direcionamento Espiritual · Total de solicitações',
+      subtitulo: `Período: ${dataBR(de)} a ${dataBR(ate)} · ${resumo}`,
+      secoes: [{ colunas, linhas: corpo.length ? [...corpo, ['Total geral', String(lista.length), '', '', '']] : [['Nenhuma solicitação no período.', '', '', '', '']] }],
+    });
+  }
+  return baixarExcel({
+    arquivo,
+    abas: [{ nome: 'Solicitações', colunas, larguras: [18, 32, 30, 18, 14], linhas: [...corpo, ['Total geral', lista.length, '', '', '']] }],
+  });
+}
+
 export async function abrirAgendaParoco({ user, secretaria }) {
   usuario = user;
   ehSecretaria = !!secretaria;
+  $('bt-total').hidden = !ehSecretaria;
   if (!ligado) {
     ligado = true;
     ligarAgendar();
@@ -516,6 +544,11 @@ export async function abrirAgendaParoco({ user, secretaria }) {
     $('sem-prox').addEventListener('click', () => { inicioMes = outroMes(inicioMes, 1); carregarSemana(); });
     $('sem-hoje').addEventListener('click', () => { inicioMes = primeiroDoMes(hojeISO()); carregarSemana(); });
     $('bt-bloquear').addEventListener('click', () => abrirBloquear());
+    $('bt-total').addEventListener('click', () => ehSecretaria && abrirRelatorio({
+      titulo: 'Total de solicitações',
+      nota: 'Uma linha por pedido de Direcionamento Espiritual no período, com a situação de cada um.',
+      gerar: gerarTotalSolicitacoes,
+    }));
     $('bt-horarios').addEventListener('click', abrirHorarios);
     await carregarHorarios();
     // Se os atendimentos deste mês já passaram, abre direto o próximo

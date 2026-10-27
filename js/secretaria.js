@@ -4,7 +4,7 @@ import { esc, hojeISO, somaDias, dataLonga, dataCurta, faixa, linkWhatsApp, prim
 import { linkComprovante } from './comprovante.js';
 import { abrirAgendaParoco } from './agenda-paroco.js';
 import { carregarPastorais } from './pastorais.js';
-import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo } from './exportar.js';
+import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo, abrirRelatorio, buscarTudo, dataBR } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
 const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais'];
@@ -504,6 +504,42 @@ async function baixarItensSalas(formato) {
   });
 }
 
+// ---------------------------------------------------------------- relatório "Total de reservas"
+// Conta as vezes que cada solicitante usou sala no período: cada turno = 1 vez;
+// só reservas confirmadas ou realizadas, pela data de uso.
+const nomeParoquia = (r) => (r.tipo === 'externo' ? (r.paroquia_origem || '') : 'Paróquia São José');
+const reservasEfetivadas = (de, ate) => buscarTudo(() => sb.from('reservas')
+  .select('grupo, tipo, paroquia_origem, paroco_responsavel, data, turno_id')
+  .in('status', ['confirmada', 'realizada']).gte('data', de).lte('data', ate).order('data'));
+
+async function gerarTotalReservas(formato, { de, ate, solicitante }) {
+  let linhas = await reservasEfetivadas(de, ate);
+  if (solicitante) linhas = linhas.filter((r) => r.grupo === solicitante);
+  const grupos = new Map();
+  linhas.forEach((r) => {
+    const k = `${r.grupo}|${r.tipo === 'externo' ? 'x' : 'p'}|${nomeParoquia(r)}`;
+    const g = grupos.get(k) || { nome: r.grupo, paroquia: nomeParoquia(r), paroco: r.tipo === 'externo' ? (r.paroco_responsavel || '') : '', vezes: 0 };
+    g.vezes += 1;
+    grupos.set(k, g);
+  });
+  const lista = [...grupos.values()].sort((a, b) => b.vezes - a.vezes || a.nome.localeCompare(b.nome, 'pt-BR'));
+  const total = lista.reduce((n, g) => n + g.vezes, 0);
+  const periodo = `Período: ${dataBR(de)} a ${dataBR(ate)} · ${solicitante ? `Solicitante: ${solicitante}` : 'Todos os solicitantes'}`;
+  const colunas = ['Solicitante', 'Paróquia', 'Pároco responsável', 'Vezes que utilizou a sala'];
+  const corpo = lista.map((g) => [g.nome, g.paroquia, g.paroco, g.vezes]);
+  const arquivo = `total-de-reservas-${de}-a-${ate}`;
+  if (formato === 'pdf') {
+    return baixarPDF({
+      arquivo, deitado: false, titulo: 'Total de reservas', subtitulo: periodo,
+      secoes: [{ colunas, linhas: corpo.length ? [...corpo, ['Total geral', '', '', total]] : [['Nenhuma reserva efetivada no período.', '', '', '']] }],
+    });
+  }
+  return baixarExcel({
+    arquivo,
+    abas: [{ nome: 'Total de reservas', colunas, larguras: [36, 32, 28, 24], linhas: [...corpo, ['Total geral', '', '', total]] }],
+  });
+}
+
 async function carregarSalas() {
   const { data, error } = await sb.from('salas').select('*').order('ordem').order('numero');
   if (error) throw error;
@@ -798,6 +834,12 @@ async function iniciar() {
   ligarLogin();
   ligarBloqueios();
   ligarSalas();
+  $('bt-total-reservas').addEventListener('click', () => abrirRelatorio({
+    titulo: 'Total de reservas',
+    nota: 'Vezes que cada solicitante utilizou sala no período (cada turno conta 1 vez; só reservas confirmadas ou realizadas).',
+    solicitantes: async (de, ate) => [...new Set((await reservasEfetivadas(de, ate)).map((r) => r.grupo))].sort((x, y) => x.localeCompare(y, 'pt-BR')),
+    gerar: gerarTotalReservas,
+  }));
   $('bt-baixar-itens').addEventListener('click', () => escolherFormato('Baixar itens das salas', baixarItensSalas));
   ligarItens();
   ligarConfig();
