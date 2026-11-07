@@ -4,10 +4,11 @@ import { esc, hojeISO, somaDias, dataLonga, dataCurta, faixa, linkWhatsApp, prim
 import { linkComprovante } from './comprovante.js';
 import { abrirAgendaParoco } from './agenda-paroco.js';
 import { carregarPastorais } from './pastorais.js';
+import { carregarBarracasGestao, contarBarracasPendentes } from './barracas-gestao.js';
 import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo, abrirRelatorio, buscarTudo, dataBR } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
-const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais'];
+const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas'];
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
   confirmada: ['Confirmada', 'etq-ok'], pendente: ['Pendente', 'etq-pend'], recusada: ['Recusada', 'etq-res'],
@@ -109,6 +110,7 @@ async function entrarComUsuario(user) {
   const inicial = location.hash.slice(1);
   abrirAba(ABAS.includes(inicial) ? inicial : 'aprovacoes');
   atualizarContador();
+  contarBarracasPendentes();
 }
 
 function mostrarLoginMsg(tipo, texto) {
@@ -171,6 +173,7 @@ const CARREGAR = {
   config: carregarConfig,
   direcionamento: () => abrirAgendaParoco({ user: usuario, secretaria: ehSecretaria }),
   pastorais: carregarPastorais,
+  barracas: () => carregarBarracasGestao({ user: usuario }),
 };
 
 function abrirAba(nome) {

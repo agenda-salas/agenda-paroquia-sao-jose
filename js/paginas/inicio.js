@@ -1,6 +1,6 @@
 // Tela inicial: painel de salas
 import { carregarSalas, carregarTurnos, carregarAgenda, carregarBloqueios, carregarConfig, nomeSala } from '../api.js';
-import { montarPagina, avisoCache, escolherPerfil, faixaPerfil, perfilAtual } from '../ui.js';
+import { montarPagina, avisoCache, escolherPerfil, faixaPerfil, perfilAtual, sessao } from '../ui.js';
 import { hojeISO, somaDias, dataLonga, esc, ICONES } from '../util.js';
 import { indexarAgenda, resumoSemana, situacaoAgora, situacaoTurno } from '../calendario.js';
 
@@ -103,6 +103,8 @@ async function iniciar() {
   await montarPagina('salas');
   await escolherPerfil();
   faixaPerfil(document.getElementById('perfil'));
+  // Aba Barracas: só para paroquianos e para a secretaria
+  document.getElementById('abas-site').hidden = perfilAtual() === 'externo' && !sessao?.admin;
   document.getElementById('hoje').textContent = dataLonga(hojeISO());
   try {
     cfg = await carregarConfig();

@@ -20,6 +20,12 @@ async function iniciar() {
   const codigo = param('c');
   const token = param('t');            // link secreto dos pedidos feitos sem login
   if (!codigo && !token) { el.innerHTML = '<div class="vazio">Código do comprovante não informado.</div>'; return; }
+  // Reserva de barraca (BR-AAAA-NNNN): comprovante próprio, no mesmo modelo
+  if (codigo && /^BR-/i.test(codigo.trim())) {
+    const { mostrarBarraca } = await import('./comprovante-barraca.js');
+    await mostrarBarraca(el, codigo);
+    return;
+  }
 
   let linhas;
   try {

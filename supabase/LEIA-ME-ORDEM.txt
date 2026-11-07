@@ -1,0 +1,38 @@
+BANCO DE DADOS · Sistema de Reservas · Paróquia São José (Supabase)
+
+Banco NOVO (vazio):
+  rode apenas instalacao-completa.sql no SQL Editor (uma vez). Ele junta todos os arquivos abaixo, na ordem.
+
+Banco que JÁ ESTÁ EM USO (o atual):
+  não rode a instalação completa. Rode só os arquivos novos que ainda não foram executados.
+  (O de vocês já recebeu todos até atualizacao-incrementos.sql. Faltam os itens 21 e 22.)
+
+Ordem dos arquivos:
+ 1. schema.sql
+ 2. functions.sql
+ 3. policies.sql
+ 4. atendimentos.sql
+ 5. atualizacao-gestao.sql
+ 6. atualizacao-paroquia.sql
+ 7. atualizacao-senha.sql
+ 8. atualizacao-exclusao.sql
+ 9. atualizacao-salas.sql
+10. atualizacao-minhas.sql
+11. atualizacao-itens.sql
+12. atualizacao-limpar.sql
+13. atualizacao-minhas-atendimentos.sql
+14. atualizacao-ocultar.sql
+15. atualizacao-area.sql
+16. atualizacao-local.sql
+17. pastorais.sql
+18. atualizacao-acesso.sql
+19. atualizacao-endereco.sql
+20. atualizacao-incrementos.sql
+21. atualizacao-barracas.sql      (agendamento de barracas)
+22. atualizacao-expiracao.sql     (expiração automática a cada 15 minutos)
+
+Depois da instalação:
+  - Authentication > Sign In / Providers: desligar "Allow new users to sign up".
+  - Criar a conta da secretaria e do Pároco em Authentication > Users (Auto Confirm User)
+    e registrá-las nas tabelas administradores e parocos.
+  - O arquivo js/config.js do site (chaves do Supabase) NÃO vem no pacote: use o que já está publicado.

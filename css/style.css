@@ -525,3 +525,84 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
   .menu { gap: 2px; }
   .menu a, .menu button { padding-left: 9px; padding-right: 9px; }
 }
+
+/* ---------- Barracas (reserva das barracas das pastorais) ---------- */
+/* Abas do site: Reserva de salas · Barracas */
+.abas-site { display: flex; gap: 4px; background: var(--azul-claro); padding: 4px; border-radius: 12px; align-self: flex-start; max-width: 100%; overflow-x: auto; }
+.abas-site a { flex: 0 0 auto; font-size: 14px; font-weight: 700; padding: 10px 16px; min-height: 44px; border-radius: 9px; color: var(--texto-2); text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; transition: background-color .15s ease, color .15s ease; }
+.abas-site a:hover, .abas-site a:focus-visible, .abas-site a.ativo { background: var(--azul); color: var(--branco); box-shadow: 0 2px 6px rgba(47,74,46,.25); outline: none; }
+.abas-site a:focus-visible { outline: 2px solid var(--dourado); outline-offset: 2px; }
+
+/* Tela 1: os 12 meses */
+.grade-meses { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.mes-bloco { display: flex; flex-direction: column; gap: 4px; padding: 20px 18px; min-height: 140px; border-radius: 18px; background: var(--branco); border: 1px solid var(--azul-borda); border-top: 4px solid var(--dourado); color: var(--azul-escuro); text-decoration: none; box-shadow: 0 1px 3px rgba(47,74,46,.08); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.mes-bloco:hover, .mes-bloco:focus-visible { transform: translateY(-5px); border-color: var(--azul); border-top-color: var(--dourado); box-shadow: 0 16px 32px rgba(47,74,46,.18), 0 3px 8px rgba(47,74,46,.10); color: var(--azul-escuro); outline: none; }
+.mes-bloco:focus-visible { box-shadow: 0 0 0 3px var(--dourado), 0 16px 32px rgba(47,74,46,.18); }
+.mes-bloco:active { transform: translateY(-1px); }
+.mes-nome { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.mes-ano { font-size: 14px; font-weight: 700; color: var(--ouro); }
+.mes-lembrete { margin-top: auto; font-size: 12.5px; font-weight: 600; color: var(--texto-3); }
+.mes-bloco.atual .mes-nome::after { content: "este mês"; margin-left: 8px; vertical-align: middle; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--azul-claro); color: var(--azul); }
+.mes-sel { align-self: flex-start; margin-top: 6px; }
+.mes-bloco.encerrado { background: var(--cinza-bg); border-color: var(--cinza-bd); border-top-color: var(--cinza-bd); color: #7A8394; box-shadow: none; cursor: not-allowed; }
+.mes-bloco.encerrado .mes-ano, .mes-bloco.encerrado .mes-lembrete { color: #7A8394; }
+
+/* Tela 2: finais de semana do mês */
+.barr-nav { padding: 12px 16px; flex-wrap: wrap; }
+.barr-nav .icone-btn:disabled { opacity: .45; cursor: not-allowed; }
+.barr-fins { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 16px; }
+.barr-fim { display: flex; flex-direction: column; gap: 14px; border-top: 4px solid var(--dourado); }
+.barr-fim h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--azul-escuro); }
+.barr-dias { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.barr-dia { display: flex; flex-direction: column; gap: 8px; }
+.barr-dia.fora { opacity: .85; }
+.barr-dia-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--texto-2); min-height: 30px; }
+.barr-dia-todo { font: inherit; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--azul); background: var(--branco); color: var(--azul); cursor: pointer; }
+.barr-dia-todo:hover, .barr-dia-todo[aria-pressed="true"] { background: var(--azul); color: var(--branco); }
+.barr-turnos { display: flex; flex-direction: column; gap: 8px; }
+.barr-turno { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; min-height: 54px; border-radius: 12px; border: 1px solid var(--borda-2); background: var(--branco); color: var(--texto); }
+.barr-turno b { font-size: 14.5px; }
+.barr-turno span { font-size: 12.5px; font-weight: 600; color: var(--texto-3); }
+.barr-turno small { font-size: 12px; font-weight: 700; color: inherit; overflow-wrap: anywhere; }
+.barr-turno.livre { cursor: pointer; border-color: #C9D0DD; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.barr-turno.livre:hover, .barr-turno.livre:focus-visible { transform: translateY(-2px); border-color: var(--azul); box-shadow: 0 8px 16px rgba(47,74,46,.14); outline: none; }
+.barr-turno.livre span { color: var(--verde-tx); }
+.barr-turno.sel { border: 2px solid var(--azul); background: #F1F6EF; padding: 9px 11px; }
+.barr-turno.sel span { color: var(--azul); }
+.barr-turno.pend { background: var(--pend-bg); border: 1px dashed var(--pend-pt); color: var(--pend-tx); }
+.barr-turno.pend span { color: var(--pend-tx); }
+.barr-turno.res { background: var(--verm-bg); border-color: var(--verm-bd); color: var(--verm-tx); }
+.barr-turno.res span { color: var(--verm-tx); }
+.barr-turno.bloq { background: var(--cinza-bg); border-color: var(--cinza-bd); color: #7A8394; }
+.barr-turno.bloq span { color: #7A8394; }
+.legenda i.barr-leg-sel { background: #F1F6EF; border: 2px solid var(--azul); }
+.legenda i.barr-leg-pend { background: var(--pend-bg); border: 1px dashed var(--pend-pt); }
+.legenda i.barr-leg-res { background: var(--verm-bg); border: 1px solid var(--verm-bd); }
+
+/* Barra de seleção e janela do pedido */
+.barr-selecao { position: sticky; bottom: 12px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px 12px 18px; border-radius: 16px; background: var(--azul-escuro); color: var(--branco); box-shadow: 0 12px 30px rgba(31,48,30,.30); font-size: 14.5px; }
+.barr-selecao .btn { background: var(--dourado); border-color: var(--dourado); color: var(--azul-escuro); font-weight: 800; }
+.barr-selecao .btn:hover { background: #C99C28; border-color: #C99C28; color: var(--azul-escuro); }
+.barr-resumo ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.barr-resumo li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 10px 12px; border-radius: 10px; background: var(--azul-claro); font-size: 14px; }
+.barr-resumo li span { color: var(--azul); font-weight: 700; }
+.barr-msg { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .grade-meses { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mes-bloco { padding: 16px 14px; min-height: 124px; }
+  .mes-nome { font-size: 19px; }
+  .mes-bloco.atual .mes-nome::after { display: block; margin: 4px 0 0; width: max-content; }
+  .barr-fins { grid-template-columns: 1fr; }
+  .barr-fim { padding: 16px 14px; }
+  .barr-dias { gap: 10px; }
+  .barr-turno { padding: 9px 10px; }
+  .barr-turno.sel { padding: 8px 9px; }
+  .barr-nav h2 { min-width: 0; font-size: 18px; }
+  .barr-dia-topo { flex-direction: column; align-items: stretch; gap: 6px; }
+  .barr-dia-todo { padding: 7px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mes-bloco, .barr-turno.livre, .abas-site a { transition: none; }
+  .mes-bloco:hover, .mes-bloco:focus-visible, .barr-turno.livre:hover, .barr-turno.livre:focus-visible { transform: none; }
+}

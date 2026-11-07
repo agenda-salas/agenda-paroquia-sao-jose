@@ -4,8 +4,10 @@ import {
   minhasReservas, limparMinhasReservas, meusAtendimentos, cancelarMeuAtendimento,
   cancelarMinhaReserva, ocultarMinhaReserva, ocultarMeuAtendimento,
 } from '../api.js';
-import { montarPagina, exigirLogin } from '../ui.js';
-import { hojeISO, dataLonga, esc, hora, agoraSP } from '../util.js';
+import { montarPagina, exigirLogin, sessao } from '../ui.js';
+import { minhasBarracas, cancelarMinhaBarraca, nomeTurnoBarraca } from '../barracas.js';
+import { baixarPDF, hojeArquivo } from '../exportar.js';
+import { hojeISO, dataLonga, dataCurta, esc, hora, agoraSP, DIAS_CURTOS, diaSemana } from '../util.js';
 
 const ST_ATEND = {
   solicitado: ['Aguardando confirmação', 'etq-pend'], pendente: ['Aguardando a secretaria', 'etq-pend'],
@@ -58,6 +60,65 @@ function cartao(p) {
     </div>`;
 }
 
+// Barraca: Cancelar enquanto pendente ou confirmada e o dia não passou
+function cartaoBarraca(p) {
+  const [txt, cls] = ROTULO[p.status] || [p.status, 'etq-bloq'];
+  const ativa = ['pendente', 'confirmada'].includes(p.status) && p.ultimaData >= hojeISO();
+
+  return `
+    <div class="sala cartao-reserva">
+      <a href="comprovante.html?c=${encodeURIComponent(p.codigo)}" class="cartao-link">
+        <div class="sala-topo">
+          <span class="sala-nome">Barraca</span>
+          <span class="etq ${cls}">${txt}</span>
+        </div>
+        ${p.dias.map((d) => `<span style="font-weight:700">${esc(dataLonga(d.data))}</span><span class="nota" style="margin-top:-8px">${esc(d.turnos.map(nomeTurnoBarraca).join(', '))}</span>`).join('')}
+        <span class="nota">${esc(p.grupo)}</span>
+        <span class="nota" style="color:var(--azul);font-weight:700">${esc(p.codigo)}</span>
+      </a>
+      ${ativa ? `<div class="cartao-acoes"><button type="button" class="btn btn-perigo btn-peq" data-cancelar-br="${esc(p.codigo)}">Cancelar</button></div>` : ''}
+    </div>`;
+}
+
+// PDF com a lista de reservas: salas e barracas
+function ligarPDF(salas, barracas) {
+  const bt = document.getElementById('baixar-pdf');
+  bt.hidden = !salas.length && !barracas.length;
+  bt.onclick = async () => {
+    bt.disabled = true;
+    bt.textContent = 'Gerando…';
+    try {
+      const diaCurto = (iso) => `${DIAS_CURTOS[diaSemana(iso)]} ${dataCurta(iso)}`;
+      const situacao = (st) => (ROTULO[st] || [st])[0];
+      const ordenar = (l) => [...l].sort((a, b) => a.data.localeCompare(b.data) || a.codigo.localeCompare(b.codigo));
+      const linhasSalas = ordenar(salas).map((p) => [p.codigo, diaCurto(p.data), p.salas.nome || `Sala ${p.salas.numero}`, p.turnos.join(', '), p.grupo, situacao(p.status)]);
+      const linhasBarracas = ordenar(barracas).map((p) => [
+        p.codigo,
+        p.dias.map((d) => diaCurto(d.data)).join('\n'),
+        p.dias.map((d) => d.turnos.map(nomeTurnoBarraca).join(', ')).join('\n'),
+        p.grupo, situacao(p.status),
+      ]);
+      const nomes = (sessao?.pastorais || []).join(', ');
+      await baixarPDF({
+        arquivo: `minhas-reservas-${hojeArquivo()}`,
+        titulo: 'Minhas reservas',
+        subtitulo: `${nomes ? `${nomes} · ` : ''}Emitido em ${dataCurta(hojeISO())} · Reservas futuras e dos últimos 30 dias`,
+        deitado: false,
+        secoes: [
+          { titulo: 'Salas', colunas: ['Código', 'Data', 'Sala', 'Turnos', 'Pastoral ou grupo', 'Situação'],
+            linhas: linhasSalas.length ? linhasSalas : [['Nenhuma reserva de sala.', '', '', '', '', '']] },
+          { titulo: 'Barracas', colunas: ['Código', 'Data', 'Turnos', 'Pastoral', 'Situação'],
+            linhas: linhasBarracas.length ? linhasBarracas : [['Nenhuma reserva de barraca.', '', '', '', '']] },
+        ],
+      });
+    } catch (e) {
+      alert(e.message || 'Não foi possível gerar o PDF.');
+    }
+    bt.disabled = false;
+    bt.textContent = 'Baixar PDF';
+  };
+}
+
 function cartaoAtendimento(a) {
   const [txt, cls] = ST_ATEND[a.status] || [a.status, 'etq-bloq'];
   let botoes = '';
@@ -101,7 +162,7 @@ async function iniciar() {
 async function iniciarLista() {
   const el = document.getElementById('lista');
   try {
-    const [linhas, atendimentos] = await Promise.all([minhasReservas(), meusAtendimentos()]);
+    const [linhas, atendimentos, barracas] = await Promise.all([minhasReservas(), meusAtendimentos(), minhasBarracas().catch(() => [])]);
     // Agrupa os turnos de um mesmo pedido (mesmo código)
     const pedidos = new Map();
     for (const l of [...linhas].sort((a, b) => (a.turnos.ordem || 0) - (b.turnos.ordem || 0))) {
@@ -136,13 +197,15 @@ async function iniciarLista() {
       }
     };
 
-    if (!todos.length && !atendimentos.length) { el.innerHTML = '<div class="vazio">Você não tem reservas na lista.</div>'; return; }
+    ligarPDF(todos, barracas);
+    if (!todos.length && !atendimentos.length && !barracas.length) { el.innerHTML = '<div class="vazio">Você não tem reservas na lista.</div>'; return; }
     const atend = [...atendimentos].sort((a, b) => (a.data + a.inicio).localeCompare(b.data + b.inicio));
     el.innerHTML = `
       <section class="secao">
         <h2>Próximas</h2>
         ${proximas.length ? `<div class="grade-salas">${proximas.map(cartao).join('')}</div>` : '<div class="vazio">Nenhuma reserva de sala futura.</div>'}
       </section>
+      ${barracas.length ? `<section class="secao" style="margin-top:24px"><h2>Barracas</h2><div class="grade-salas">${barracas.map(cartaoBarraca).join('')}</div></section>` : ''}
       ${atend.length ? `<section class="secao" style="margin-top:24px"><h2>Direcionamento Espiritual</h2><div class="grade-salas">${atend.map(cartaoAtendimento).join('')}</div></section>` : ''}
       ${passadas.length ? `<section class="secao" style="margin-top:24px"><h2>Últimos 30 dias</h2><div class="grade-salas">${passadas.map(cartao).join('')}</div></section>` : ''}`;
 
@@ -150,6 +213,8 @@ async function iniciarLista() {
       (b) => cancelarMinhaReserva(b.dataset.cancelar));
     ligar(el, '[data-excluir]', 'Tirar esta reserva da sua lista? A secretaria continua com o registro.',
       (b) => ocultarMinhaReserva(b.dataset.excluir));
+    ligar(el, '[data-cancelar-br]', 'Cancelar esta reserva de barraca? Os turnos ficam livres para outras pastorais. Esta ação não pode ser desfeita.',
+      (b) => cancelarMinhaBarraca(b.dataset.cancelarBr));
     ligar(el, '[data-cancelar-at]', 'Cancelar este pedido de Direcionamento Espiritual? O horário fica livre para outra pessoa.',
       (b) => cancelarMeuAtendimento(Number(b.dataset.cancelarAt)));
     ligar(el, '[data-excluir-at]', 'Tirar este atendimento da sua lista?',
