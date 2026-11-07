@@ -509,7 +509,7 @@ async function baixarItensSalas(formato) {
 // só reservas confirmadas ou realizadas, pela data de uso.
 const nomeParoquia = (r) => (r.tipo === 'externo' ? (r.paroquia_origem || '') : 'Paróquia São José');
 const reservasEfetivadas = (de, ate) => buscarTudo(() => sb.from('reservas')
-  .select('grupo, tipo, paroquia_origem, paroco_responsavel, data, turno_id')
+  .select('grupo, tipo, paroquia_origem, paroco_responsavel, responsavel_telefone, data, turno_id')
   .in('status', ['confirmada', 'realizada']).gte('data', de).lte('data', ate).order('data'));
 
 async function gerarTotalReservas(formato, { de, ate, solicitante }) {
@@ -517,26 +517,43 @@ async function gerarTotalReservas(formato, { de, ate, solicitante }) {
   if (solicitante) linhas = linhas.filter((r) => r.grupo === solicitante);
   const grupos = new Map();
   linhas.forEach((r) => {
-    const k = `${r.grupo}|${r.tipo === 'externo' ? 'x' : 'p'}|${nomeParoquia(r)}`;
-    const g = grupos.get(k) || { nome: r.grupo, paroquia: nomeParoquia(r), paroco: r.tipo === 'externo' ? (r.paroco_responsavel || '') : '', vezes: 0 };
+    const ext = r.tipo === 'externo';
+    const k = `${r.grupo}|${ext ? 'x' : 'p'}|${nomeParoquia(r)}`;
+    const g = grupos.get(k) || { nome: r.grupo, externo: ext, paroquia: nomeParoquia(r), paroco: ext ? (r.paroco_responsavel || '') : '', fones: new Set(), vezes: 0 };
     g.vezes += 1;
+    if (ext && r.responsavel_telefone) g.fones.add(r.responsavel_telefone);
     grupos.set(k, g);
   });
-  const lista = [...grupos.values()].sort((a, b) => b.vezes - a.vezes || a.nome.localeCompare(b.nome, 'pt-BR'));
-  const total = lista.reduce((n, g) => n + g.vezes, 0);
-  const periodo = `Período: ${dataBR(de)} a ${dataBR(ate)} · ${solicitante ? `Solicitante: ${solicitante}` : 'Todos os solicitantes'}`;
-  const colunas = ['Solicitante', 'Paróquia', 'Pároco responsável', 'Vezes que utilizou a sala'];
-  const corpo = lista.map((g) => [g.nome, g.paroquia, g.paroco, g.vezes]);
+  const ordem = (a, b) => b.vezes - a.vezes || a.nome.localeCompare(b.nome, 'pt-BR');
+  const paroq = [...grupos.values()].filter((g) => !g.externo).sort(ordem);
+  const ext = [...grupos.values()].filter((g) => g.externo).sort(ordem);
+  const soma = (l) => l.reduce((n, g) => n + g.vezes, 0);
+  const total = soma(paroq) + soma(ext);
+  const periodo = `Período: ${dataBR(de)} a ${dataBR(ate)} · ${solicitante ? `Solicitante: ${solicitante}` : 'Todos os solicitantes'} · Total geral: ${total}`;
+
+  const colP = ['Solicitante', 'Vezes que utilizou a sala'];
+  const colE = ['Solicitante', 'Paróquia', 'Pároco responsável', 'Telefone', 'Vezes que utilizou a sala'];
+  const linP = paroq.map((g) => [g.nome, g.vezes]);
+  const linE = ext.map((g) => [g.nome, g.paroquia, g.paroco, [...g.fones].join(', '), g.vezes]);
   const arquivo = `total-de-reservas-${de}-a-${ate}`;
   if (formato === 'pdf') {
+    const vazio = (n) => [['Nenhuma reserva no período.', ...Array(n - 1).fill('')]];
     return baixarPDF({
       arquivo, deitado: false, titulo: 'Total de reservas', subtitulo: periodo,
-      secoes: [{ colunas, linhas: corpo.length ? [...corpo, ['Total geral', '', '', total]] : [['Nenhuma reserva efetivada no período.', '', '', '']] }],
+      secoes: [
+        { titulo: 'Paroquianos', colunas: colP, linhas: linP.length ? [...linP, ['Subtotal', soma(paroq)]] : vazio(2) },
+        { titulo: 'Não Paroquianos', colunas: colE, linhas: linE.length ? [...linE, ['Subtotal', '', '', '', soma(ext)]] : vazio(5) },
+        { titulo: 'Total geral', colunas: ['Paroquianos', 'Não Paroquianos', 'Total geral'], linhas: [[soma(paroq), soma(ext), total]] },
+      ],
     });
   }
   return baixarExcel({
     arquivo,
-    abas: [{ nome: 'Total de reservas', colunas, larguras: [36, 32, 28, 24], linhas: [...corpo, ['Total geral', '', '', total]] }],
+    abas: [
+      { nome: 'Paroquianos', colunas: colP, larguras: [40, 24], linhas: [...linP, ['Subtotal', soma(paroq)]] },
+      { nome: 'Não Paroquianos', colunas: colE, larguras: [32, 30, 26, 30, 24], linhas: [...linE, ['Subtotal', '', '', '', soma(ext)]] },
+      { nome: 'Total geral', colunas: ['Paroquianos', 'Não Paroquianos', 'Total geral'], larguras: [16, 18, 14], linhas: [[soma(paroq), soma(ext), total]] },
+    ],
   });
 }
 
