@@ -11,8 +11,11 @@ import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo, abrirRelatorio, b
 
 const $ = (id) => document.getElementById(id);
 const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas', 'agenda'];
-// Abas que ficam dentro da lista suspensa "Controles"
-const CONTROLES = ['reservas', 'bloqueios', 'salas', 'coordenadores'];
+// Abas que ficam dentro das listas suspensas do menu
+const GRUPOS = {
+  solicitacoes: ['aprovacoes', 'direcionamento', 'barracas'],
+  controles: ['reservas', 'bloqueios', 'salas', 'coordenadores', 'config'],
+};
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
   confirmada: ['Confirmada', 'etq-ok'], pendente: ['Pendente', 'etq-pend'], recusada: ['Recusada', 'etq-res'],
@@ -98,7 +101,8 @@ async function entrarComUsuario(user) {
   $('usuario-nome').textContent = user.email;
   // O Pároco vê só a aba do Direcionamento Espiritual
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => { b.hidden = !ehSecretaria && b.dataset.aba !== 'direcionamento'; });
-  $('grupo-controles').hidden = !ehSecretaria;
+  // Pároco: Solicitações só com o Direcionamento; Controles só com Alterar minha senha
+  document.querySelectorAll('[data-so-secretaria]').forEach((el) => { el.hidden = !ehSecretaria; });
   document.querySelector('.marca-titulo').textContent = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
   document.title = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
   mostrar('v-gestao');
@@ -185,38 +189,62 @@ const CARREGAR = {
 };
 
 // ---------------------------------------------------------------- lista suspensa "Controles"
-function fecharControles() {
-  $('menu-controles').hidden = true;
-  $('bt-controles').setAttribute('aria-expanded', 'false');
+function fecharMenus(exceto) {
+  document.querySelectorAll('.abas-grupo').forEach((g) => {
+    if (g === exceto) return;
+    g.querySelector('.abas-menu').hidden = true;
+    g.querySelector('.abas-controles').setAttribute('aria-expanded', 'false');
+  });
 }
 
-function ligarControles() {
-  const bt = $('bt-controles');
-  const menu = $('menu-controles');
-  bt.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const abrir = menu.hidden;
-    menu.hidden = !abrir;
-    bt.setAttribute('aria-expanded', String(abrir));
-    if (abrir) (menu.querySelector('[aria-selected="true"]') || menu.querySelector('button')).focus();
+function ligarMenus() {
+  document.querySelectorAll('.abas-grupo').forEach((g) => {
+    const bt = g.querySelector('.abas-controles');
+    const menu = g.querySelector('.abas-menu');
+    bt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const abrir = menu.hidden;
+      fecharMenus(g);
+      menu.hidden = !abrir;
+      bt.setAttribute('aria-expanded', String(abrir));
+      if (abrir) {
+        const itens = [...menu.querySelectorAll('button, a')].filter((x) => !x.hidden);
+        (itens.find((x) => x.getAttribute('aria-selected') === 'true') || itens[0])?.focus();
+      }
+    });
+    menu.addEventListener('keydown', (e) => {
+      if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+      e.preventDefault();
+      const itens = [...menu.querySelectorAll('button, a')].filter((x) => !x.hidden);
+      const k = itens.indexOf(document.activeElement);
+      itens[(k + (e.key === 'ArrowDown' ? 1 : itens.length - 1)) % itens.length].focus();
+    });
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => fecharMenus()));
   });
-  document.addEventListener('click', (e) => { if (!menu.hidden && !$('grupo-controles').contains(e.target)) fecharControles(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { fecharControles(); bt.focus(); } });
-  menu.addEventListener('keydown', (e) => {
-    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
-    e.preventDefault();
-    const itens = [...menu.querySelectorAll('button')];
-    const i = itens.indexOf(document.activeElement);
-    itens[(i + (e.key === 'ArrowDown' ? 1 : itens.length - 1)) % itens.length].focus();
+  document.addEventListener('click', (e) => { if (!e.target.closest('.abas-grupo')) fecharMenus(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const aberto = document.querySelector('.abas-menu:not([hidden])');
+    if (aberto) { fecharMenus(); aberto.parentElement.querySelector('.abas-controles').focus(); }
   });
+  // Contador de Solicitações = pendentes de salas + pendentes de barracas
+  const somar = () => {
+    const n = ['cont-aprov', 'cont-barracas'].reduce((t, id) => t + (Number($(id).textContent) || 0), 0);
+    $('cont-solic').textContent = n;
+    $('cont-solic').hidden = n === 0;
+  };
+  const obs = new MutationObserver(somar);
+  ['cont-aprov', 'cont-barracas'].forEach((id) => obs.observe($(id), { childList: true, characterData: true, subtree: true }));
 }
 
 function abrirAba(nome) {
   if (!ehSecretaria) nome = 'direcionamento';
   history.replaceState(null, '', `#${nome}`);
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === nome)));
-  $('bt-controles').classList.toggle('ativo', CONTROLES.includes(nome));
-  fecharControles();
+  for (const [g, abas] of Object.entries(GRUPOS)) {
+    $(`grupo-${g}`).querySelector('.abas-controles').classList.toggle('ativo', abas.includes(nome));
+  }
+  fecharMenus();
   ABAS.forEach((a) => { $(`aba-${a}`).hidden = a !== nome; });
   limparAviso();
   CARREGAR[nome]().catch((e) => aviso('erro', limparErro(e)));
@@ -901,7 +929,7 @@ async function iniciar() {
   ligarItens();
   ligarConfig();
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
-  ligarControles();
+  ligarMenus();
   $('f-filtro').addEventListener('change', (e) => { if (e.target.name !== 'busca') carregarReservas().catch((er) => aviso('erro', limparErro(er))); });
   $('f-filtro').busca.addEventListener('input', desenharReservas);
   $('f-filtro').addEventListener('submit', (e) => e.preventDefault());

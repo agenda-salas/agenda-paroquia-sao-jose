@@ -716,3 +716,10 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
   .acol-img, .acol-digitando i, .acol-mostra { animation: none; }
   .acol-oculto { opacity: 1; transform: none; }
 }
+
+/* Listas suspensas do menu: links e separador */
+.abas-gestao .abas-menu a { display: flex; align-items: center; width: 100%; margin: 0; background: none; font-size: 14px; font-weight: 700; padding: 10px 14px; min-height: 44px; border-radius: 9px; color: var(--texto-2); text-decoration: none; white-space: nowrap; }
+.abas-gestao .abas-menu a:hover, .abas-gestao .abas-menu a:focus-visible { background: var(--azul); color: var(--branco); outline: none; }
+.abas-gestao .abas-menu a[hidden], .abas-sep[hidden] { display: none; }
+.abas-sep { border: 0; border-top: 1px solid var(--borda); margin: 4px 6px; }
+.abas-controles .contador { margin-left: 2px; }
