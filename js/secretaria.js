@@ -5,10 +5,14 @@ import { linkComprovante } from './comprovante.js';
 import { abrirAgendaParoco } from './agenda-paroco.js';
 import { carregarPastorais } from './pastorais.js';
 import { carregarBarracasGestao, contarBarracasPendentes } from './barracas-gestao.js';
+import { carregarAgenda } from './agenda-gestao.js';
+import { verificarAvisoDiario } from './aviso-agenda.js';
 import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo, abrirRelatorio, buscarTudo, dataBR } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
-const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas'];
+const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas', 'agenda'];
+// Abas que ficam dentro da lista suspensa "Controles"
+const CONTROLES = ['reservas', 'bloqueios', 'salas', 'coordenadores'];
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
   confirmada: ['Confirmada', 'etq-ok'], pendente: ['Pendente', 'etq-pend'], recusada: ['Recusada', 'etq-res'],
@@ -94,6 +98,7 @@ async function entrarComUsuario(user) {
   $('usuario-nome').textContent = user.email;
   // O Pároco vê só a aba do Direcionamento Espiritual
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => { b.hidden = !ehSecretaria && b.dataset.aba !== 'direcionamento'; });
+  $('grupo-controles').hidden = !ehSecretaria;
   document.querySelector('.marca-titulo').textContent = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
   document.title = ehSecretaria ? 'Área de Gestão - Secretaria' : 'Área de Gestão - Pároco';
   mostrar('v-gestao');
@@ -111,6 +116,8 @@ async function entrarComUsuario(user) {
   abrirAba(ABAS.includes(inicial) ? inicial : 'aprovacoes');
   atualizarContador();
   contarBarracasPendentes();
+  // Aviso do acólito: compromissos de hoje e dos próximos 3 dias (1x por dia, por conta)
+  verificarAvisoDiario({ abrirAgenda: () => abrirAba('agenda') });
 }
 
 function mostrarLoginMsg(tipo, texto) {
@@ -174,12 +181,42 @@ const CARREGAR = {
   direcionamento: () => abrirAgendaParoco({ user: usuario, secretaria: ehSecretaria }),
   pastorais: carregarPastorais,
   barracas: () => carregarBarracasGestao({ user: usuario }),
+  agenda: () => carregarAgenda({ user: usuario, abrirAba }),
 };
+
+// ---------------------------------------------------------------- lista suspensa "Controles"
+function fecharControles() {
+  $('menu-controles').hidden = true;
+  $('bt-controles').setAttribute('aria-expanded', 'false');
+}
+
+function ligarControles() {
+  const bt = $('bt-controles');
+  const menu = $('menu-controles');
+  bt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const abrir = menu.hidden;
+    menu.hidden = !abrir;
+    bt.setAttribute('aria-expanded', String(abrir));
+    if (abrir) (menu.querySelector('[aria-selected="true"]') || menu.querySelector('button')).focus();
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !$('grupo-controles').contains(e.target)) fecharControles(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { fecharControles(); bt.focus(); } });
+  menu.addEventListener('keydown', (e) => {
+    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+    e.preventDefault();
+    const itens = [...menu.querySelectorAll('button')];
+    const i = itens.indexOf(document.activeElement);
+    itens[(i + (e.key === 'ArrowDown' ? 1 : itens.length - 1)) % itens.length].focus();
+  });
+}
 
 function abrirAba(nome) {
   if (!ehSecretaria) nome = 'direcionamento';
   history.replaceState(null, '', `#${nome}`);
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === nome)));
+  $('bt-controles').classList.toggle('ativo', CONTROLES.includes(nome));
+  fecharControles();
   ABAS.forEach((a) => { $(`aba-${a}`).hidden = a !== nome; });
   limparAviso();
   CARREGAR[nome]().catch((e) => aviso('erro', limparErro(e)));
@@ -507,7 +544,7 @@ async function baixarItensSalas(formato) {
   });
 }
 
-// ---------------------------------------------------------------- relatório "Total de reservas"
+// ---------------------------------------------------------------- relatório "Histórico de reservas"
 // Conta as vezes que cada solicitante usou sala no período: cada turno = 1 vez;
 // só reservas confirmadas ou realizadas, pela data de uso.
 const nomeParoquia = (r) => (r.tipo === 'externo' ? (r.paroquia_origem || '') : 'Paróquia São José');
@@ -538,11 +575,11 @@ async function gerarTotalReservas(formato, { de, ate, solicitante }) {
   const colE = ['Solicitante', 'Paróquia', 'Pároco responsável', 'Telefone', 'Vezes que utilizou a sala'];
   const linP = paroq.map((g) => [g.nome, g.vezes]);
   const linE = ext.map((g) => [g.nome, g.paroquia, g.paroco, [...g.fones].join(', '), g.vezes]);
-  const arquivo = `total-de-reservas-${de}-a-${ate}`;
+  const arquivo = `historico-de-reservas-${de}-a-${ate}`;
   if (formato === 'pdf') {
     const vazio = (n) => [['Nenhuma reserva no período.', ...Array(n - 1).fill('')]];
     return baixarPDF({
-      arquivo, deitado: false, titulo: 'Total de reservas', subtitulo: periodo,
+      arquivo, deitado: false, titulo: 'Histórico de reservas', subtitulo: periodo,
       secoes: [
         { titulo: 'Paroquianos', colunas: colP, linhas: linP.length ? [...linP, ['Subtotal', soma(paroq)]] : vazio(2) },
         { titulo: 'Não Paroquianos', colunas: colE, linhas: linE.length ? [...linE, ['Subtotal', '', '', '', soma(ext)]] : vazio(5) },
@@ -855,7 +892,7 @@ async function iniciar() {
   ligarBloqueios();
   ligarSalas();
   $('bt-total-reservas').addEventListener('click', () => abrirRelatorio({
-    titulo: 'Total de reservas',
+    titulo: 'Histórico de reservas',
     nota: 'Vezes que cada solicitante utilizou sala no período (cada turno conta 1 vez; só reservas confirmadas ou realizadas).',
     solicitantes: async (de, ate) => [...new Set((await reservasEfetivadas(de, ate)).map((r) => r.grupo))].sort((x, y) => x.localeCompare(y, 'pt-BR')),
     gerar: gerarTotalReservas,
@@ -864,6 +901,7 @@ async function iniciar() {
   ligarItens();
   ligarConfig();
   document.querySelectorAll('.abas-gestao [data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
+  ligarControles();
   $('f-filtro').addEventListener('change', (e) => { if (e.target.name !== 'busca') carregarReservas().catch((er) => aviso('erro', limparErro(er))); });
   $('f-filtro').busca.addEventListener('input', desenharReservas);
   $('f-filtro').addEventListener('submit', (e) => e.preventDefault());

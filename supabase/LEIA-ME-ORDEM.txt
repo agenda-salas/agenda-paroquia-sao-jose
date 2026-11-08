@@ -5,7 +5,7 @@ Banco NOVO (vazio):
 
 Banco que JÁ ESTÁ EM USO (o atual):
   não rode a instalação completa. Rode só os arquivos novos que ainda não foram executados.
-  (O de vocês já recebeu todos até atualizacao-incrementos.sql. Faltam os itens 21 e 22.)
+  (O de vocês já recebeu todos até atualizacao-expiracao.sql. Falta o item 23.)
 
 Ordem dos arquivos:
  1. schema.sql
@@ -30,6 +30,7 @@ Ordem dos arquivos:
 20. atualizacao-incrementos.sql
 21. atualizacao-barracas.sql      (agendamento de barracas)
 22. atualizacao-expiracao.sql     (expiração automática a cada 15 minutos)
+23. atualizacao-agenda.sql        (Agenda da secretaria e aviso diário do acólito)
 
 Depois da instalação:
   - Authentication > Sign In / Providers: desligar "Allow new users to sign up".
