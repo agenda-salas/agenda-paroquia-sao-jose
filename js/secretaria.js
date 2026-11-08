@@ -10,11 +10,11 @@ import { verificarAvisoDiario } from './aviso-agenda.js';
 import { baixarPDF, baixarExcel, escolherFormato, hojeArquivo, abrirRelatorio, buscarTudo, dataBR } from './exportar.js';
 
 const $ = (id) => document.getElementById(id);
-const ABAS = ['aprovacoes', 'reservas', 'bloqueios', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas', 'agenda'];
+const ABAS = ['aprovacoes', 'reservas', 'salas', 'coordenadores', 'config', 'direcionamento', 'pastorais', 'barracas', 'agenda'];
 // Abas que ficam dentro das listas suspensas do menu
 const GRUPOS = {
   solicitacoes: ['aprovacoes', 'direcionamento', 'barracas'],
-  controles: ['reservas', 'bloqueios', 'salas', 'coordenadores', 'config'],
+  controles: ['reservas', 'salas', 'coordenadores', 'config'],
 };
 const ATIVOS = ['pendente', 'confirmada'];
 const SITUACAO = {
@@ -118,6 +118,8 @@ async function entrarComUsuario(user) {
   preencherSelects();
   const inicial = location.hash.slice(1);
   abrirAba(ABAS.includes(inicial) ? inicial : 'aprovacoes');
+  // Link antigo #bloqueios: abre Aprovações na parte dos bloqueios
+  if (inicial === 'bloqueios' && ehSecretaria) setTimeout(() => $('secao-bloqueios').scrollIntoView({ behavior: 'smooth' }), 400);
   atualizarContador();
   contarBarracasPendentes();
   // Aviso do acólito: compromissos de hoje e dos próximos 3 dias (1x por dia, por conta)
@@ -176,9 +178,9 @@ function ligarLogin() {
 
 // ---------------------------------------------------------------- abas
 const CARREGAR = {
-  aprovacoes: carregarAprovacoes,
+  // Aprovações: pedidos aguardando + bloqueios de salas (como na aba Barracas)
+  aprovacoes: () => Promise.all([carregarAprovacoes(), carregarBloqueios()]),
   reservas: carregarReservas,
-  bloqueios: carregarBloqueios,
   salas: carregarSalas,
   coordenadores: carregarCoordenadores,
   config: carregarConfig,

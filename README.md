@@ -23,7 +23,7 @@ PWA (site instalável no celular) em **HTML, CSS e JavaScript puros**, sem frame
    - Uma barraca por turno. O pedido pendente já ocupa o turno. A secretaria aprova em até 48 h, senão o pedido expira.
    - Comprovante no mesmo modelo das salas, com código `BR-AAAA-NNNN`.
 3. **Direcionamento Espiritual**: pedido de horário com o Pároco, sem login (terça para paroquianos, quinta para enfermos). Todo pedido é analisado pelo Pároco ou pela secretaria.
-4. **Área de Gestão** (`secretaria.html`). Menu: **Solicitações ▾** (Aprovações, Direcionamento Espiritual, Barracas) · **Controles ▾** (Reservas, Bloqueios, Salas, Usuários, Configurações, Alterar minha senha, Ver site de reservas) · Pastorais, Movimentos e Grupos · **Agenda**. Na primeira abertura do dia, o acólito mostra os compromissos de hoje e dos próximos 3 dias. Relatórios em PDF e Excel gerados no navegador.
+4. **Área de Gestão** (`secretaria.html`). Menu: **Solicitações ▾** (Aprovações com os bloqueios de salas, Direcionamento Espiritual, Barracas) · **Controles ▾** (Reservas, Salas, Usuários, Configurações, Alterar minha senha, Ver site de reservas) · Pastorais, Movimentos e Grupos · **Agenda**. Na primeira abertura do dia, o acólito mostra os compromissos de hoje e dos próximos 3 dias. Relatórios em PDF e Excel gerados no navegador.
    - O Pároco vê só Solicitações > Direcionamento Espiritual e Controles > Alterar minha senha.
 
 ## Acesso
