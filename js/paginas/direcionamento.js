@@ -214,9 +214,9 @@ function ligarPedido() {
     if (tipo === 'paroquiano') {
       if (f.sem_pastoral.checked) pastoral = '__nenhuma__';
       else {
-        if (!f.pastoral.value.trim()) return erro('Informe a Pastoral, Movimento ou Grupo de que participa, ou marque "Não participo de pastoral".');
+        if (!f.pastoral.value.trim()) return erro('Informe a pastoral, o movimento ou o grupo de que participa, ou marque "Não participo de pastoral".');
         pastoral = pastoralOficial(f.pastoral.value);
-        if (!pastoral && pastorais.length) return erro(`Pastoral, Movimento ou Grupo - INVÁLIDO. Digite corretamente o nome ou entre em contato com a secretaria Paroquial ${telSecretaria}`);
+        if (!pastoral && pastorais.length) return erro(`Pastoral, movimento ou grupo inválido. Digite o nome corretamente ou entre em contato com a secretaria paroquial ${telSecretaria}`);
         pastoral = pastoral || f.pastoral.value.trim();
         f.pastoral.value = pastoral;
       }

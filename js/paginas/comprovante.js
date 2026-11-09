@@ -79,7 +79,7 @@ async function iniciar() {
       <button type="button" class="btn btn-peq" id="copiar-link">Copiar link</button>
     </div>` : ''}
     <div class="comp-marca">
-      <img src="img/brasao.png" alt="Brasão da Paróquia São José" onerror="this.remove()">
+      <a href="index.html" class="marca-link" title="Ir para a página inicial" aria-label="Página inicial"><img src="img/brasao.png" alt="Brasão da Paróquia São José" onerror="this.remove()"></a>
       <div><b>Reservas de salas</b><span style="font-weight:700">Paróquia São José</span></div>
     </div>
 

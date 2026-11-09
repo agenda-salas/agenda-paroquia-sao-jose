@@ -612,8 +612,8 @@ async function gerarTotalReservas(formato, { de, ate, solicitante }) {
       arquivo, deitado: false, titulo: 'Histórico de reservas', subtitulo: periodo,
       secoes: [
         { titulo: 'Paroquianos', colunas: colP, linhas: linP.length ? [...linP, ['Subtotal', soma(paroq)]] : vazio(2) },
-        { titulo: 'Não Paroquianos', colunas: colE, linhas: linE.length ? [...linE, ['Subtotal', '', '', '', soma(ext)]] : vazio(5) },
-        { titulo: 'Total geral', colunas: ['Paroquianos', 'Não Paroquianos', 'Total geral'], linhas: [[soma(paroq), soma(ext), total]] },
+        { titulo: 'Não paroquianos', colunas: colE, linhas: linE.length ? [...linE, ['Subtotal', '', '', '', soma(ext)]] : vazio(5) },
+        { titulo: 'Total geral', colunas: ['Paroquianos', 'Não paroquianos', 'Total geral'], linhas: [[soma(paroq), soma(ext), total]] },
       ],
     });
   }
@@ -621,8 +621,8 @@ async function gerarTotalReservas(formato, { de, ate, solicitante }) {
     arquivo,
     abas: [
       { nome: 'Paroquianos', colunas: colP, larguras: [40, 24], linhas: [...linP, ['Subtotal', soma(paroq)]] },
-      { nome: 'Não Paroquianos', colunas: colE, larguras: [32, 30, 26, 30, 24], linhas: [...linE, ['Subtotal', '', '', '', soma(ext)]] },
-      { nome: 'Total geral', colunas: ['Paroquianos', 'Não Paroquianos', 'Total geral'], larguras: [16, 18, 14], linhas: [[soma(paroq), soma(ext), total]] },
+      { nome: 'Não paroquianos', colunas: colE, larguras: [32, 30, 26, 30, 24], linhas: [...linE, ['Subtotal', '', '', '', soma(ext)]] },
+      { nome: 'Total geral', colunas: ['Paroquianos', 'Não paroquianos', 'Total geral'], larguras: [16, 18, 14], linhas: [[soma(paroq), soma(ext), total]] },
     ],
   });
 }
@@ -923,7 +923,7 @@ async function iniciar() {
   ligarSalas();
   $('bt-total-reservas').addEventListener('click', () => abrirRelatorio({
     titulo: 'Histórico de reservas',
-    nota: 'Vezes que cada solicitante utilizou sala no período (cada turno conta 1 vez; só reservas confirmadas ou realizadas).',
+    nota: 'Vezes que cada solicitante utilizou uma sala no período (cada turno conta 1 vez; só reservas confirmadas ou realizadas).',
     solicitantes: async (de, ate) => [...new Set((await reservasEfetivadas(de, ate)).map((r) => r.grupo))].sort((x, y) => x.localeCompare(y, 'pt-BR')),
     gerar: gerarTotalReservas,
   }));
@@ -946,3 +946,17 @@ iniciar();
 
 // Permite instalar como app no celular (PWA)
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// ---------------------------------------------------------------- data e hora no topo
+// Ex.: "Brasília - DF, 9 de novembro de 2026. 20:44" (horário de Brasília)
+function atualizarDataHora() {
+  const el = $('data-hora');
+  if (!el) return;
+  const agora = new Date();
+  const data = agora.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+  const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  el.textContent = `Brasília - DF, ${data}. ${hora}`;
+  // próxima virada de minuto
+  setTimeout(atualizarDataHora, 60000 - (agora.getSeconds() * 1000 + agora.getMilliseconds()) + 50);
+}
+atualizarDataHora();

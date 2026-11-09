@@ -1,14 +1,14 @@
 // Service worker: guarda as telas para abrir sem internet.
 // Os dados da agenda ficam guardados pelo próprio app (última agenda baixada).
-const VERSAO = 'salas-sj-v44';
+const VERSAO = 'salas-sj-v45';
 const ARQUIVOS = [
   './', './index.html', './sala.html', './entrar.html', './reservar.html', './comprovante.html', './minhas-reservas.html',
-  './secretaria.html', './atendimentos.html', './direcionamento.html', './barracas.html', './css/style.css?v=32',
+  './secretaria.html', './atendimentos.html', './direcionamento.html', './barracas.html', './css/style.css?v=33',
   './js/config.js', './js/api.js', './js/util.js', './js/ui.js', './js/calendario.js', './js/comprovante.js',
   './js/paginas/inicio.js', './js/paginas/sala.js', './js/paginas/entrar.js', './js/paginas/reservar.js',
   './js/paginas/comprovante.js', './js/paginas/minhas.js', './js/paginas/direcionamento.js', './js/secretaria.js', './js/agenda-paroco.js', './js/pastorais.js', './js/exportar.js',
   './js/barracas.js', './js/barracas-gestao.js', './js/agenda-dados.js', './js/agenda-gestao.js', './js/aviso-agenda.js', './js/paginas/barracas.js', './js/paginas/comprovante-barraca.js',
-  './img/brasao.png', './img/paroquia.png', './img/acolito.png', './icons/icon-192.png', './icons/icon-512.png', './manifest.json', './manifest-gestao.json', './manifest-paroco.json',
+  './img/brasao.png', './img/paroquia.png', './img/acolito.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-192.png', './icons/icon-maskable-512.png', './manifest.json', './manifest-gestao.json', './manifest-paroco.json',
 ];
 
 self.addEventListener('install', (e) => {
@@ -37,7 +37,12 @@ self.addEventListener('fetch', (e) => {
       fetch(req, { cache: 'no-cache' }).then((res) => {
         if (res.ok) { const copia = res.clone(); caches.open(VERSAO).then((c) => c.put(req, copia)); }
         return res;
-      }).catch(() => caches.match(req, { ignoreSearch: true }))
+      }).catch(() => caches.match(req, { ignoreSearch: true }).then((guardada) => {
+        if (guardada) return guardada;
+        // Sem internet e página ainda não guardada: mostra a página inicial guardada
+        if (req.mode === 'navigate') return caches.match(url.pathname.includes('secretaria') ? './secretaria.html' : './index.html');
+        return Response.error();
+      }))
     );
     return;
   }

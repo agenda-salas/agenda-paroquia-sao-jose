@@ -12,7 +12,7 @@ export const TURNOS_BARRACA = [
 export const nomeTurnoBarraca = (c) => (TURNOS_BARRACA.find((t) => t.codigo === c) || {}).nome || c;
 const ordemTurno = (c) => TURNOS_BARRACA.findIndex((t) => t.codigo === c);
 
-export const TEXTO_APROVACAO_BARRACA = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes da data agendada, faça contato com a secretaria paroquial pelo telefone (61) 3354-2921, em horário comercial.';
+export const TEXTO_APROVACAO_BARRACA = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48 horas. Não havendo retorno em até 12 horas antes da data agendada, faça contato com a secretaria paroquial pelo telefone (61) 3354-2921, em horário comercial.';
 
 // Agenda pública do período (só nome da pastoral) e bloqueios
 export async function carregarAgendaBarracas(inicio, fim) {

@@ -2,11 +2,11 @@
 // e as reservas de salas, barracas e Direcionamento (confirmadas e pendentes).
 // Só leitura das reservas: nada nas regras de reserva muda.
 import { sb, limparErro } from './api.js';
-import { somaDias } from './util.js';
+import { somaDias, hora } from './util.js';
 
 const TURNO_BARRACA = { M: 'Manhã', V: 'Tarde', N: 'Noite' };
 const ORDEM_TURNO = { M: 1, V: 2, N: 3 };
-export const hhmm = (t) => (t ? String(t).slice(0, 5).replace(':', 'h') : '');
+export const hhmm = (t) => (t ? hora(String(t).slice(0, 5)) : '');
 
 // Período "19h00 às 21h00" (ou "Dia inteiro")
 export function periodoEvento(e) {

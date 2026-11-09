@@ -13,7 +13,7 @@ let usarLista = false;                                        // paroquiano esco
 const alterando = (param('alterar') || '').toUpperCase();   // código da reserva que está sendo alterada
 let antigas = [];                                             // turnos ativos da reserva antiga
 const CHAVE_EXTRAS = 'salas-sj:dados-outra-paroquia';
-const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48h. Não havendo retorno em até 12h antes do horário agendado, faça contato com a secretaria paroquial pelo telefone (61) 3354-2921, em horário comercial.';
+const TEXTO_APROVACAO = 'Esta reserva depende de aprovação da secretaria, que deve ocorrer em até 48 horas. Não havendo retorno em até 12 horas antes do horário agendado, faça contato com a secretaria paroquial pelo telefone (61) 3354-2921, em horário comercial.';
 
 // Conta de pastoral: o grupo é sempre uma das pastorais deste login
 const minhas = () => (sessao && !sessao.admin && sessao.pastorais) || [];

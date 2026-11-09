@@ -58,13 +58,13 @@ export async function mostrarBarraca(el, codigo) {
     expirada: `O pedido não foi analisado dentro do prazo e o turno foi liberado. Se ainda precisar da barraca, faça uma nova reserva ou fale com a secretaria paroquial ${tel}. Agradecemos a compreensão.`,
   };
   const regras = FINAL[p.status] || (p.status === 'pendente' ? TEXTO_APROVACAO_BARRACA
-    : 'Monte a barraca no turno reservado e deixe o espaço limpo e organizado ao final. Qualquer ocorrência, procure a secretaria da Paróquia no primeiro horário útil seguinte.');
+    : 'Monte a barraca no turno reservado e deixe o espaço limpo e organizado ao final. Em caso de ocorrência, procure a secretaria da Paróquia no primeiro horário útil seguinte.');
   const dias = p.dias.map((d) => `${esc(dataLonga(d.data))}<br><span class="nota" style="font-weight:600">${esc(d.turnos.map(nomeTurnoBarraca).join(', '))}</span>`).join('<br>');
 
   el.innerHTML = `
     ${novo && p.status === 'pendente' ? '<div class="aviso aviso-ok nao-imprimir"><span><b>Pedido enviado.</b> A secretaria vai analisar e responder em até 48 horas.</span></div>' : ''}
     <div class="comp-marca">
-      <img src="img/brasao.png" alt="Brasão da Paróquia São José" onerror="this.remove()">
+      <a href="index.html" class="marca-link" title="Ir para a página inicial" aria-label="Página inicial"><img src="img/brasao.png" alt="Brasão da Paróquia São José" onerror="this.remove()"></a>
       <div><b>Reserva de barracas</b><span style="font-weight:700">Paróquia São José</span></div>
     </div>
 

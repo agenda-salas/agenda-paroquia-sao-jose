@@ -45,8 +45,8 @@ entrar.html            entrar e alterar senha
 direcionamento.html    pedido de Direcionamento Espiritual
 secretaria.html        Área de Gestão (login próprio)
 atendimentos.html      redireciona para a aba Direcionamento da gestão
-css/style.css          estilos (versão no link: style.css?v=32)
-sw.js                  service worker, rede primeiro (VERSAO 'salas-sj-v43')
+css/style.css          estilos (versão no link: style.css?v=33)
+sw.js                  service worker, rede primeiro (VERSAO 'salas-sj-v45')
 js/config.js           chaves do Supabase (NÃO vai no pacote; nunca alterar)
 js/api.js              cliente Supabase e acesso aos dados das salas
 js/barracas.js         acesso aos dados e textos das barracas

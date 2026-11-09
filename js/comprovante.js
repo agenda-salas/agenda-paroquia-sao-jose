@@ -8,7 +8,7 @@ export function linkComprovante(codigo, token) {
     : `${SITE_URL}/comprovante.html?c=${encodeURIComponent(codigo)}`;
 }
 
-export const TEXTO_ITENS = 'Você receberá a sala com os itens abaixo. Ao fim da reserva deixe-os da forma como os encontrou. Qualquer ocorrência procure a secretaria da Paróquia no primeiro horário útil seguinte.';
+export const TEXTO_ITENS = 'Você receberá a sala com os itens abaixo. Ao fim da reserva, deixe-os como os encontrou. Em caso de ocorrência, procure a secretaria da Paróquia no primeiro horário útil seguinte.';
 
 export function textoComprovante(linhas) {
   const r = linhas[0];

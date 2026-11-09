@@ -723,3 +723,15 @@ body .btn[aria-pressed="true"] { background: var(--azul); color: var(--branco); 
 .abas-gestao .abas-menu a[hidden], .abas-sep[hidden] { display: none; }
 .abas-sep { border: 0; border-top: 1px solid var(--borda); margin: 4px 6px; }
 .abas-controles .contador { margin-left: 2px; }
+
+/* Topo da gestão: brasão com link e data/hora abaixo do e-mail */
+.marca-link { display: inline-flex; border-radius: 10px; transition: transform .15s ease, box-shadow .15s ease; }
+.marca-link:hover, .marca-link:focus-visible { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(47,74,46,.18); outline: none; }
+.marca-link:focus-visible { outline: 2px solid var(--dourado); outline-offset: 2px; }
+.usuario-bloco { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
+.usuario-data { font-size: 12.5px; font-weight: 600; color: var(--texto-3); white-space: nowrap; padding-right: 6px; }
+@media (max-width: 640px) {
+  .usuario-bloco { align-items: flex-start; }
+  .usuario-data { white-space: normal; font-size: 12px; padding: 0 0 0 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .marca-link { transition: none; } .marca-link:hover { transform: none; } }

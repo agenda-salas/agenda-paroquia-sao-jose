@@ -189,10 +189,10 @@ export function escolherPerfil() {
       </div>
       <div class="perfil-opcoes">
         <button type="button" class="perfil-opcao" data-perfil="paroquiano">
-          <span class="perfil-ic">${icone('paroquiano')}</span><span class="perfil-tx"><b>Pastoral, Grupo ou Movimento</b><span class="perfil-det">Entrar com o login da pastoral</span></span>
+          <span class="perfil-ic">${icone('paroquiano')}</span><span class="perfil-tx"><b>Pastoral, grupo ou movimento</b><span class="perfil-det">Entrar com o login da pastoral</span></span>
         </button>
         <button type="button" class="perfil-opcao" data-perfil="externo">
-          <span class="perfil-ic">${icone('externo')}</span><span class="perfil-tx"><b>Não sou Paroquiano</b><span class="perfil-det">Pedido sem login, com aprovação</span></span>
+          <span class="perfil-ic">${icone('externo')}</span><span class="perfil-tx"><b>Não sou paroquiano</b><span class="perfil-det">Pedido sem login, com aprovação</span></span>
         </button>
         <a class="perfil-opcao" href="${raiz}/direcionamento.html" data-direcionamento>
           <span class="perfil-ic">${icone('direcionamento')}</span><span class="perfil-tx"><b>Direcionamento Espiritual</b><span class="perfil-det">Pedir horário com o Pároco</span></span>
